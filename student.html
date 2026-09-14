@@ -10,6 +10,9 @@
   <!-- Firebase CDN for Real-time Cloud Sync -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- MQTT Real-time WebSocket Relay -->
+  <script src="lib/mqtt.min.js"></script>
+  <script src="https://unpkg.com/mqtt@5.10.2/dist/mqtt.min.js"></script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -760,6 +763,8 @@
     let shuffledDefs = [];
 
     let presenceInterval = null;
+    let mqttClient = null;
+    let bcChannel = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       loadSavedSettings();
@@ -767,8 +772,100 @@
       renderGroupPills();
       renderCharPills();
       loadGroupMatching(0);
-      listenToMasterControl();
+      initSyncEngine();
     });
+
+    function initSyncEngine() {
+      // 1. BroadcastChannel for local tab sync
+      try {
+        bcChannel = new BroadcastChannel('chinese_vocab_room601');
+        bcChannel.onmessage = (event) => {
+          handleIncomingSync(event.data);
+        };
+      } catch(e) {}
+
+      // 2. MQTT for Cloud Real-time WebSockets Sync
+      if (window.mqtt) {
+        try {
+          mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+            clientId: 'student_' + Math.random().toString(16).substr(2, 8),
+            keepalive: 30
+          });
+
+          mqttClient.on('connect', () => {
+            const statusEl = document.getElementById('cloud-status-indicator');
+            if (statusEl) statusEl.textContent = '🟢 雲端同步已連線：等待老師下達指令';
+            mqttClient.subscribe('chinese_vocab_room601/#');
+            reportPresenceToCloud();
+          });
+
+          mqttClient.on('message', (topic, message) => {
+            try {
+              const data = JSON.parse(message.toString());
+              handleIncomingSync(data);
+            } catch(e) {}
+          });
+
+          mqttClient.on('error', () => {
+            // Fallback to HiveMQ
+            try {
+              mqttClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt', { clientId: 'student_' + Math.random().toString(16).substr(2, 8) });
+            } catch(e) {}
+          });
+        } catch(e) {}
+      }
+
+      // 3. Firebase Fallback
+      listenToMasterControl();
+    }
+
+    function handleIncomingSync(msg) {
+      if (!msg) return;
+      if (msg.type === 'control') {
+        applyControlState(msg.data);
+      }
+    }
+
+    function applyControlState(ctrl) {
+      if (!ctrl) return;
+      const overlay = document.getElementById('student-lock-overlay');
+      const overlayIcon = document.getElementById('lock-overlay-icon');
+      const overlayTitle = document.getElementById('lock-overlay-title');
+      const overlaySub = document.getElementById('lock-overlay-subtitle');
+
+      if (ctrl.targetCharIndex !== undefined && ctrl.targetCharIndex !== currentCharIndex) {
+        loadGroupMatching(ctrl.targetCharIndex);
+      }
+
+      roundTimerSeconds = ctrl.timerSeconds || 60;
+      const groupLabelText = currentGroupId ? `【第 ${currentGroupId} 組】` : `【請點選組別】`;
+
+      if (ctrl.state === 'active') {
+        if (!currentGroupId) {
+          document.getElementById('entry-group-modal').classList.remove('hidden');
+        } else {
+          isRoundActive = true;
+          overlay.classList.add('hidden');
+          startStudentCountdown(ctrl.startTime, ctrl.timerSeconds);
+        }
+      } else if (ctrl.state === 'ended') {
+        isRoundActive = false;
+        if (studentTimerInterval) clearInterval(studentTimerInterval);
+        overlay.classList.remove('hidden');
+        overlayIcon.textContent = '⏰';
+        overlayTitle.textContent = '作答時間到！';
+        overlaySub.textContent = `${groupLabelText} 請抬頭觀看黑板大螢幕進行檢討！`;
+      } else {
+        isRoundActive = false;
+        if (studentTimerInterval) clearInterval(studentTimerInterval);
+        overlay.classList.remove('hidden');
+        overlayIcon.textContent = '⏳';
+        overlayTitle.textContent = currentGroupId ? '已進入房間，等待老師按「開始」' : '請先點選您的小組編號！';
+        overlaySub.textContent = currentGroupId ? 
+          `${groupLabelText} 準備就緒！請看黑板大螢幕等待老師按「開始」...` :
+          `請先點選上方組別按鈕，以向老師的大螢幕報到！`;
+      }
+    }
 
     function loadSavedSettings() {
       const savedGroups = localStorage.getItem('custom_group_count');
@@ -779,8 +876,6 @@
         try { currentLessonData = JSON.parse(savedLessonData); } catch(e) {}
       }
 
-      // Always require explicit group selection unless student taps group
-      // This ensures students select their group when opening the app on a tablet
       currentGroupId = null;
       document.getElementById('entry-group-modal').classList.remove('hidden');
     }
@@ -847,63 +942,33 @@
     function listenToMasterControl() {
       if (!db) return;
 
-      reportPresenceToCloud();
-      startPresenceHeartbeat();
-
       db.ref('vocab_rooms/room601/control').on('value', (snapshot) => {
-        const ctrl = snapshot.val() || { state: 'waiting', targetCharIndex: 0, timerSeconds: 60 };
-        
-        const overlay = document.getElementById('student-lock-overlay');
-        const overlayIcon = document.getElementById('lock-overlay-icon');
-        const overlayTitle = document.getElementById('lock-overlay-title');
-        const overlaySub = document.getElementById('lock-overlay-subtitle');
-
-        if (ctrl.targetCharIndex !== undefined && ctrl.targetCharIndex !== currentCharIndex) {
-          loadGroupMatching(ctrl.targetCharIndex);
-        }
-
-        roundTimerSeconds = ctrl.timerSeconds || 60;
-
-        const groupLabelText = currentGroupId ? `【第 ${currentGroupId} 組】` : `【請點選組別】`;
-
-        if (ctrl.state === 'active') {
-          if (!currentGroupId) {
-            // Force modal if not selected group yet
-            document.getElementById('entry-group-modal').classList.remove('hidden');
-          } else {
-            isRoundActive = true;
-            overlay.classList.add('hidden');
-            startStudentCountdown(ctrl.startTime, ctrl.timerSeconds);
-          }
-        } else if (ctrl.state === 'ended') {
-          isRoundActive = false;
-          if (studentTimerInterval) clearInterval(studentTimerInterval);
-          overlay.classList.remove('hidden');
-          overlayIcon.textContent = '⏰';
-          overlayTitle.textContent = '作答時間到！';
-          overlaySub.textContent = `${groupLabelText} 請抬頭觀看黑板大螢幕進行檢討！`;
-        } else {
-          isRoundActive = false;
-          if (studentTimerInterval) clearInterval(studentTimerInterval);
-          overlay.classList.remove('hidden');
-          overlayIcon.textContent = '⏳';
-          overlayTitle.textContent = currentGroupId ? '已進入房間，等待老師按「開始」' : '請先點選您的小組編號！';
-          overlaySub.textContent = currentGroupId ? 
-            `${groupLabelText} 準備就緒！請看黑板大螢幕等待老師按「開始」...` :
-            `請先點選上方組別按鈕，以向老師的大螢幕報到！`;
-        }
+        const ctrl = snapshot.val();
+        if (ctrl) applyControlState(ctrl);
       });
     }
 
     function reportPresenceToCloud() {
-      if (db && currentGroupId) {
-        const pRef = db.ref(`vocab_rooms/room601/presence/group_${currentGroupId}`);
-        pRef.set({
-          groupId: currentGroupId,
-          status: 'online',
-          updatedAt: firebase.database.ServerValue.TIMESTAMP
-        });
-        pRef.onDisconnect().remove();
+      if (!currentGroupId) return;
+
+      const payload = { type: 'presence', data: { groupId: currentGroupId, status: 'online', time: Date.now() } };
+
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish('chinese_vocab_room601/presence', JSON.stringify(payload));
+      }
+      if (bcChannel) {
+        bcChannel.postMessage(payload);
+      }
+      if (db) {
+        try {
+          const pRef = db.ref(`vocab_rooms/room601/presence/group_${currentGroupId}`);
+          pRef.set({
+            groupId: currentGroupId,
+            status: 'online',
+            updatedAt: Date.now()
+          });
+          pRef.onDisconnect().remove();
+        } catch(e) {}
       }
     }
 
@@ -911,7 +976,7 @@
       if (presenceInterval) clearInterval(presenceInterval);
       presenceInterval = setInterval(() => {
         reportPresenceToCloud();
-      }, 5000);
+      }, 3000);
     }
 
     function startStudentCountdown(startTime, totalSecs) {
@@ -1070,7 +1135,7 @@
       const syncKey = `sync_char_${cIdx}`;
       const syncMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
 
-      const payload = {
+      const payloadData = {
         groupId: gId,
         char: currentLessonData[cIdx].char,
         current: current,
@@ -1081,13 +1146,23 @@
         updatedAt: new Date().getTime()
       };
 
-      syncMap[gId] = payload;
+      syncMap[gId] = payloadData;
       localStorage.setItem(syncKey, JSON.stringify(syncMap));
 
-      if (db) {
-        db.ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload);
-        reportPresenceToCloud();
+      const payloadMsg = { type: 'answer', charIdx: cIdx, data: payloadData };
+
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish(`chinese_vocab_room601/answer/${cIdx}`, JSON.stringify(payloadMsg));
       }
+      if (bcChannel) {
+        bcChannel.postMessage(payloadMsg);
+      }
+      if (db) {
+        try {
+          db.ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payloadData);
+        } catch(e) {}
+      }
+      reportPresenceToCloud();
     }
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();

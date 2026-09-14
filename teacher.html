@@ -10,6 +10,9 @@
   <!-- Firebase CDN for Real-time Cloud Sync -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- MQTT Real-time WebSocket Relay -->
+  <script src="lib/mqtt.min.js"></script>
+  <script src="https://unpkg.com/mqtt@5.10.2/dist/mqtt.min.js"></script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -757,42 +760,155 @@
       renderSyncReviewGrid(currentCharIndex);
     }
 
-    // Master Broadcast Commands
-    function broadcastStartRound() {
-      const timerSecs = parseInt(document.getElementById('master-timer-select').value || '60');
-      const startTime = new Date().getTime();
+    let mqttClient = null;
+    let bcChannel = null;
+    let activePresence = {};
 
-      if (db) {
-        db.ref('vocab_rooms/room601/control').set({
-          state: 'active',
-          targetCharIndex: currentCharIndex,
-          timerSeconds: timerSecs,
-          startTime: startTime
-        });
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSavedSettings();
+      populateReviewSelect();
+      initTeacherSyncEngine();
+      renderPresenceBar();
+      renderSyncReviewGrid(0);
+    });
+
+    function initTeacherSyncEngine() {
+      // 1. BroadcastChannel for local tab sync
+      try {
+        bcChannel = new BroadcastChannel('chinese_vocab_room601');
+        bcChannel.onmessage = (event) => {
+          handleIncomingTeacherSync(event.data);
+        };
+      } catch(e) {}
+
+      // 2. MQTT for Cloud Real-time WebSockets Sync
+      if (window.mqtt) {
+        try {
+          mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+            clientId: 'teacher_' + Math.random().toString(16).substr(2, 8),
+            keepalive: 30
+          });
+
+          mqttClient.on('connect', () => {
+            mqttClient.subscribe('chinese_vocab_room601/#');
+            const badge = document.getElementById('cloud-sync-badge');
+            if (badge) badge.textContent = '🟢 雲端同步已連線';
+          });
+
+          mqttClient.on('message', (topic, message) => {
+            try {
+              const data = JSON.parse(message.toString());
+              handleIncomingTeacherSync(data);
+            } catch(e) {}
+          });
+
+          mqttClient.on('error', () => {
+            // Fallback to HiveMQ
+            try {
+              mqttClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt', { clientId: 'teacher_' + Math.random().toString(16).substr(2, 8) });
+            } catch(e) {}
+          });
+        } catch(e) {}
       }
 
-      startMasterClock(startTime, timerSecs);
+      // 3. Firebase Fallback
+      listenToPresence();
+      listenToCloudUpdates(0);
+
+      // Periodically expire offline presence (after 12s)
+      setInterval(() => {
+        const now = Date.now();
+        let changed = false;
+        for (let g in activePresence) {
+          if (activePresence[g] && activePresence[g].lastSeen && (now - activePresence[g].lastSeen > 12000)) {
+            delete activePresence[g];
+            changed = true;
+          }
+        }
+        if (changed) {
+          renderPresenceBar();
+          renderSyncReviewGrid(currentCharIndex);
+        }
+      }, 3000);
+    }
+
+    function handleIncomingTeacherSync(msg) {
+      if (!msg) return;
+
+      if (msg.type === 'presence') {
+        const pData = msg.data;
+        if (pData && pData.groupId) {
+          activePresence[pData.groupId] = {
+            status: pData.status,
+            lastSeen: Date.now()
+          };
+          renderPresenceBar();
+          renderSyncReviewGrid(currentCharIndex);
+        }
+      } else if (msg.type === 'answer') {
+        const aData = msg.data;
+        if (aData && aData.groupId) {
+          const cIdx = msg.charIdx !== undefined ? msg.charIdx : currentCharIndex;
+          const syncKey = `sync_char_${cIdx}`;
+          const localMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
+          localMap[aData.groupId] = aData;
+          localStorage.setItem(syncKey, JSON.stringify(localMap));
+
+          if (cIdx === currentCharIndex) {
+            renderSyncReviewGrid(cIdx);
+          }
+        }
+      }
+    }
+
+    function broadcastMasterControl(state) {
+      const timerSecs = parseInt(document.getElementById('master-timer-select').value || '60');
+      const startTime = Date.now();
+
+      const payloadData = {
+        state: state,
+        targetCharIndex: currentCharIndex,
+        timerSeconds: timerSecs,
+        startTime: startTime
+      };
+
+      const payload = { type: 'control', data: payloadData };
+
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish('chinese_vocab_room601/control', JSON.stringify(payload));
+      }
+      if (bcChannel) {
+        bcChannel.postMessage(payload);
+      }
+      if (db) {
+        try {
+          db.ref('vocab_rooms/room601/control').set(payloadData);
+        } catch(e) {}
+      }
+
+      if (state === 'active') {
+        startMasterClock(startTime, timerSecs);
+      } else if (state === 'ended') {
+        if (masterTimerInterval) clearInterval(masterTimerInterval);
+        document.getElementById('master-timer-clock').textContent = '⏰ 作答結束！';
+      } else if (state === 'waiting') {
+        if (masterTimerInterval) clearInterval(masterTimerInterval);
+        document.getElementById('master-timer-clock').textContent = '⏱️ 等待發布作答';
+        resetCurrentCharAllGroups();
+      }
+    }
+
+    // Master Broadcast Commands
+    function broadcastStartRound() {
+      broadcastMasterControl('active');
     }
 
     function broadcastEndRound() {
-      if (db) {
-        db.ref('vocab_rooms/room601/control/state').set('ended');
-      }
-      if (masterTimerInterval) clearInterval(masterTimerInterval);
-      document.getElementById('master-timer-clock').textContent = '⏰ 作答結束！';
+      broadcastMasterControl('ended');
     }
 
     function broadcastResetRound() {
-      if (db) {
-        db.ref('vocab_rooms/room601/control').set({
-          state: 'waiting',
-          targetCharIndex: currentCharIndex,
-          timerSeconds: parseInt(document.getElementById('master-timer-select').value || '60')
-        });
-      }
-      if (masterTimerInterval) clearInterval(masterTimerInterval);
-      document.getElementById('master-timer-clock').textContent = '⏱️ 等待發布作答';
-      resetCurrentCharAllGroups();
+      broadcastMasterControl('waiting');
     }
 
     function startMasterClock(startTime, totalSecs) {
@@ -816,29 +932,24 @@
       masterTimerInterval = setInterval(updateClock, 1000);
     }
 
-    // Live Connected Presence Listener
-    let activePresence = {};
+    // Live Connected Presence Listener (Firebase Fallback)
     let presenceDataCache = {};
 
     function listenToPresence() {
       if (!db) return;
-      db.ref('vocab_rooms/room601/presence').on('value', (snapshot) => {
-        presenceDataCache = snapshot.val() || {};
-        updatePresenceState();
-      });
-    }
-
-    function updatePresenceState() {
-      activePresence = {};
-      for (let key in presenceDataCache) {
-        const gInfo = presenceDataCache[key];
-        if (gInfo) {
-          const gId = gInfo.groupId || parseInt(key.replace('group_', ''));
-          if (gId) activePresence[gId] = true;
-        }
-      }
-      renderPresenceBar();
-      renderSyncReviewGrid(currentCharIndex);
+      try {
+        db.ref('vocab_rooms/room601/presence').on('value', (snapshot) => {
+          presenceDataCache = snapshot.val() || {};
+          for (let key in presenceDataCache) {
+            const gInfo = presenceDataCache[key];
+            if (gInfo && gInfo.groupId) {
+              activePresence[gInfo.groupId] = { status: 'online', lastSeen: Date.now() };
+            }
+          }
+          renderPresenceBar();
+          renderSyncReviewGrid(currentCharIndex);
+        });
+      } catch(e) {}
     }
 
     function renderPresenceBar() {
@@ -846,7 +957,7 @@
       if (!container) return;
       let html = '<span style="font-size: 13px; color: #c7d2fe; font-weight: 700;">各組連線狀態：</span>';
       for (let g = 1; g <= totalGroupCount; g++) {
-        const isOnline = activePresence[g];
+        const isOnline = !!activePresence[g];
         html += `<span class="presence-badge ${isOnline ? 'online' : ''}">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
       }
       container.innerHTML = html;
