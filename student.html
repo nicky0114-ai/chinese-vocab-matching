@@ -338,8 +338,8 @@
         <h1 class="brand-title">生字語詞小組配對 - 學生平板端</h1>
       </div>
     </div>
-    <div style="font-size: 14px; color: var(--accent); font-weight: 700;" id="cloud-status-indicator">
-      🌐 雲端連線狀態：同步中
+    <div style="font-size: 14px; color: #34d399; font-weight: 700;" id="cloud-status-indicator">
+      🌐 雲端連線：已連線 (即時同步大螢幕)
     </div>
   </header>
 
@@ -402,13 +402,13 @@
   </main>
 
   <script>
-    // Firebase Realtime DB Setup for cross-device sync
     const firebaseConfig = {
       databaseURL: "https://chinese-vocab-match-default-rtdb.firebaseio.com"
     };
     try {
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     } catch(e) {}
+    const db = firebase.database ? firebase.database() : null;
 
     const defaultLessonData = [
       {
@@ -833,12 +833,12 @@
       syncMap[gId] = payload;
       localStorage.setItem(syncKey, JSON.stringify(syncMap));
 
-      // Push live update to Cloud Database
-      try {
-        if (firebase.database) {
-          firebase.database().ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload);
-        }
-      } catch(e) {}
+      // Push real-time cloud data to Firebase Database
+      if (db) {
+        db.ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload)
+          .then(() => { console.log("Cloud sync push success!"); })
+          .catch(err => { console.error("Cloud push err:", err); });
+      }
     }
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();

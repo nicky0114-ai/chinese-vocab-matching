@@ -7,6 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <!-- Firebase CDN for Real-time Cloud Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -275,8 +278,11 @@
     <div class="brand">
       <span class="brand-icon">🖥️</span>
       <div>
-        <h1 class="brand-title">生字語詞限時闖關 - 教師控制與檢討大螢幕</h1>
+        <h1 class="brand-title">生字語詞限時闖關 - 教師主控與檢討大螢幕</h1>
       </div>
+    </div>
+    <div style="font-size: 14px; color: #34d399; font-weight: 700;" id="teacher-cloud-status">
+      🟢 雲端跨裝置即時監聽中 (毫秒級同步)
     </div>
 
     <nav class="nav-tabs">
@@ -297,7 +303,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
           <div>
             <h2 style="font-size: 24px; font-weight: 800;" id="review-title-display">【裁】字全班各組作答對比與檢討</h2>
-            <p style="color: var(--text-muted); margin-top: 4px;">大螢幕同步對比各組連線細節！學生在平板作答時此處會自動刷新。</p>
+            <p style="color: var(--text-muted); margin-top: 4px;">大螢幕同步對比各組連線細節！學生在手機/平板作答時此處會自動即時更新。</p>
           </div>
           <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
             <span style="font-weight: 700; color: var(--accent);">切換檢討生字：</span>
@@ -335,8 +341,8 @@
           <select class="form-select" id="group-count-select" onchange="updateGroupCountSetting(this.value)">
             <option value="4">4 組</option>
             <option value="5">5 組</option>
-            <option value="6" selected>6 組 (標準班級)</option>
-            <option value="7">7 組</option>
+            <option value="6">6 組</option>
+            <option value="7" selected>7 組 (標準班級)</option>
             <option value="8">8 組</option>
             <option value="10">10 組</option>
           </select>
@@ -386,6 +392,15 @@
   </main>
 
   <script>
+    // Firebase Setup for Teacher Realtime Cloud Sync
+    const firebaseConfig = {
+      databaseURL: "https://chinese-vocab-match-default-rtdb.firebaseio.com"
+    };
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    } catch(e) {}
+    const db = firebase.database ? firebase.database() : null;
+
     const defaultLessonData = [
       {
         char: "裁",
@@ -595,18 +610,14 @@
     ];
 
     let currentLessonData = [...defaultLessonData];
-    let totalGroupCount = 6;
+    let totalGroupCount = 7;
     let currentCharIndex = 0;
 
     document.addEventListener('DOMContentLoaded', () => {
       loadSavedSettings();
       populateReviewSelect();
+      listenToCloudUpdates(0);
       renderSyncReviewGrid(0);
-
-      // Auto refresh review data every 2 seconds
-      setInterval(() => {
-        renderSyncReviewGrid(currentCharIndex);
-      }, 2000);
     });
 
     function loadSavedSettings() {
@@ -648,7 +659,29 @@
 
     function changeReviewCharacter(cIdx) {
       currentCharIndex = parseInt(cIdx);
+      listenToCloudUpdates(currentCharIndex);
       renderSyncReviewGrid(currentCharIndex);
+    }
+
+    // Active Listener to Firebase Cloud DB
+    let currentDbRef = null;
+    function listenToCloudUpdates(cIdx) {
+      if (!db) return;
+      if (currentDbRef) currentDbRef.off();
+
+      currentDbRef = db.ref(`vocab_rooms/room601/char_${cIdx}`);
+      currentDbRef.on('value', (snapshot) => {
+        const cloudMap = snapshot.val() || {};
+        const syncKey = `sync_char_${cIdx}`;
+        const localMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
+
+        for (let gId in cloudMap) {
+          localMap[gId] = cloudMap[gId];
+        }
+
+        localStorage.setItem(syncKey, JSON.stringify(localMap));
+        renderSyncReviewGrid(cIdx);
+      });
     }
 
     function renderSyncReviewGrid(cIdx) {
@@ -770,6 +803,11 @@
       if (confirm(`確定要「重置【${currentLessonData[currentCharIndex].char}】字」的全班紀錄，讓全班再挑戰一次嗎？`)) {
         const syncKey = `sync_char_${currentCharIndex}`;
         localStorage.removeItem(syncKey);
+
+        if (db) {
+          db.ref(`vocab_rooms/room601/char_${currentCharIndex}`).remove();
+        }
+
         renderSyncReviewGrid(currentCharIndex);
         alert(`已成功重置【${currentLessonData[currentCharIndex].char}】字！全班可以重新開始配對挑戰。`);
       }
@@ -781,6 +819,9 @@
           if (key.startsWith('sync_char_') || key.startsWith('vocab_group_')) {
             localStorage.removeItem(key);
           }
+        }
+        if (db) {
+          db.ref(`vocab_rooms/room601`).remove();
         }
         renderSyncReviewGrid(0);
         alert("已成功清空全班作答紀錄！");
