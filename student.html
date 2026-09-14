@@ -48,6 +48,78 @@
       background-color: #064e3b !important;
     }
 
+    /* INITIAL GROUP SELECTION MODAL */
+    .entry-group-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #0f172a;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .entry-group-modal.hidden {
+      display: none;
+    }
+
+    .entry-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .entry-subtitle {
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 32px;
+    }
+
+    .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .entry-group-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+
+    .entry-group-card:hover {
+      border-color: var(--accent);
+      transform: scale(1.05);
+      background: #2e1065;
+    }
+
+    .entry-group-icon {
+      font-size: 36px;
+    }
+
+    .entry-group-name {
+      font-size: 22px;
+      font-weight: 900;
+      color: #fff;
+    }
+
     .app-header {
       background: rgba(30, 41, 59, 0.85);
       backdrop-filter: blur(12px);
@@ -85,7 +157,6 @@
       position: relative;
     }
 
-    /* Wait & Lock Overlay */
     .student-lock-overlay {
       position: absolute;
       top: 0;
@@ -373,6 +444,17 @@
 
   <canvas id="confetti-canvas"></canvas>
 
+  <!-- INITIAL GROUP SELECTION MODAL ON ENTRY -->
+  <div class="entry-group-modal" id="entry-group-modal">
+    <div class="brand-icon" style="font-size: 54px; margin-bottom: 12px;">📱</div>
+    <h2 class="entry-title">歡迎來到國語生字配對！</h2>
+    <p class="entry-subtitle">📍 請先點選您的小組編號進入房間：</p>
+    
+    <div class="entry-grid" id="entry-grid-container">
+      <!-- Generated group cards -->
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="brand">
       <span class="brand-icon">📱</span>
@@ -387,7 +469,6 @@
 
   <main class="main-container">
     
-    <!-- Lock & Waiting Overlay -->
     <div class="student-lock-overlay" id="student-lock-overlay">
       <div class="lock-icon" id="lock-overlay-icon">⏳</div>
       <h2 style="font-size: 32px; font-weight: 900; color: #a5b4fc;" id="lock-overlay-title">已進入房間，等待老師按「開始」</h2>
@@ -397,7 +478,7 @@
     </div>
 
     <div class="tablet-identity-bar">
-      <span style="font-weight: 700; color: #a5b4fc; font-size: 17px;">🏷️ 請選擇本台平板的小組：</span>
+      <span style="font-weight: 700; color: #a5b4fc; font-size: 17px;">🏷️ 目前小組：</span>
       <div class="group-id-pills" id="group-id-pills-container">
         <!-- Dynamic group pills -->
       </div>
@@ -672,19 +753,17 @@
 
     let currentLessonData = [...defaultLessonData];
     let totalGroupCount = 7;
-    let currentGroupId = 1;
+    let currentGroupId = null; // null initially until student selects!
     let currentCharIndex = 0;
     let selectedWordCard = null;
     let userMatches = {};
     let shuffledDefs = [];
 
-    // Master Control States
-    let isRoundActive = false;
-    let roundTimerSeconds = 60;
-    let studentTimerInterval = null;
+    let presenceInterval = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       loadSavedSettings();
+      renderEntryGroupCards();
       renderGroupPills();
       renderCharPills();
       loadGroupMatching(0);
@@ -699,6 +778,39 @@
       if (savedLessonData) {
         try { currentLessonData = JSON.parse(savedLessonData); } catch(e) {}
       }
+
+      // Always require explicit group selection unless student taps group
+      // This ensures students select their group when opening the app on a tablet
+      currentGroupId = null;
+      document.getElementById('entry-group-modal').classList.remove('hidden');
+    }
+
+    function renderEntryGroupCards() {
+      const container = document.getElementById('entry-grid-container');
+      let html = '';
+      for (let g = 1; g <= totalGroupCount; g++) {
+        html += `
+          <div class="entry-group-card" onclick="selectInitialGroup(${g})">
+            <span class="entry-group-icon">👥</span>
+            <span class="entry-group-name">第 ${g} 組</span>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function showGroupSelectionModal() {
+      document.getElementById('entry-group-modal').classList.remove('hidden');
+    }
+
+    function selectInitialGroup(gId) {
+      currentGroupId = gId;
+      localStorage.setItem('selected_group_id', gId);
+      document.getElementById('entry-group-modal').classList.add('hidden');
+      renderGroupPills();
+      loadGroupMatching(currentCharIndex);
+      reportPresenceToCloud();
+      startPresenceHeartbeat();
     }
 
     function renderGroupPills() {
@@ -708,14 +820,19 @@
         pillsHtml += `<button class="group-id-btn ${g === currentGroupId ? 'active' : ''}" onclick="setGroupId(${g})">第 ${g} 組</button>`;
       }
       container.innerHTML = pillsHtml;
-      document.getElementById('overlay-group-id').textContent = currentGroupId;
+      const overlaySpan = document.getElementById('overlay-group-id');
+      if (overlaySpan) {
+        overlaySpan.textContent = currentGroupId ? currentGroupId : '未選擇';
+      }
     }
 
     function setGroupId(gId) {
       currentGroupId = gId;
+      localStorage.setItem('selected_group_id', gId);
       renderGroupPills();
       loadGroupMatching(currentCharIndex);
       reportPresenceToCloud();
+      startPresenceHeartbeat();
     }
 
     function renderCharPills() {
@@ -727,11 +844,11 @@
       `).join('');
     }
 
-    // Listen to Teacher Master Broadcast State
     function listenToMasterControl() {
       if (!db) return;
 
       reportPresenceToCloud();
+      startPresenceHeartbeat();
 
       db.ref('vocab_rooms/room601/control').on('value', (snapshot) => {
         const ctrl = snapshot.val() || { state: 'waiting', targetCharIndex: 0, timerSeconds: 60 };
@@ -747,36 +864,54 @@
 
         roundTimerSeconds = ctrl.timerSeconds || 60;
 
+        const groupLabelText = currentGroupId ? `【第 ${currentGroupId} 組】` : `【請點選組別】`;
+
         if (ctrl.state === 'active') {
-          isRoundActive = true;
-          overlay.classList.add('hidden');
-          startStudentCountdown(ctrl.startTime, ctrl.timerSeconds);
+          if (!currentGroupId) {
+            // Force modal if not selected group yet
+            document.getElementById('entry-group-modal').classList.remove('hidden');
+          } else {
+            isRoundActive = true;
+            overlay.classList.add('hidden');
+            startStudentCountdown(ctrl.startTime, ctrl.timerSeconds);
+          }
         } else if (ctrl.state === 'ended') {
           isRoundActive = false;
           if (studentTimerInterval) clearInterval(studentTimerInterval);
           overlay.classList.remove('hidden');
           overlayIcon.textContent = '⏰';
           overlayTitle.textContent = '作答時間到！';
-          overlaySub.textContent = `【第 ${currentGroupId} 組】請抬頭觀看黑板大螢幕進行檢討！`;
-        } else { // waiting
+          overlaySub.textContent = `${groupLabelText} 請抬頭觀看黑板大螢幕進行檢討！`;
+        } else {
           isRoundActive = false;
           if (studentTimerInterval) clearInterval(studentTimerInterval);
           overlay.classList.remove('hidden');
           overlayIcon.textContent = '⏳';
-          overlayTitle.textContent = '已進入房間，等待老師發布指令';
-          overlaySub.textContent = `【第 ${currentGroupId} 組】準備就緒！請看黑板大螢幕等待老師按「開始」...`;
+          overlayTitle.textContent = currentGroupId ? '已進入房間，等待老師按「開始」' : '請先點選您的小組編號！';
+          overlaySub.textContent = currentGroupId ? 
+            `${groupLabelText} 準備就緒！請看黑板大螢幕等待老師按「開始」...` :
+            `請先點選上方組別按鈕，以向老師的大螢幕報到！`;
         }
       });
     }
 
     function reportPresenceToCloud() {
-      if (db) {
-        db.ref(`vocab_rooms/room601/presence/group_${currentGroupId}`).set({
+      if (db && currentGroupId) {
+        const pRef = db.ref(`vocab_rooms/room601/presence/group_${currentGroupId}`);
+        pRef.set({
           groupId: currentGroupId,
           status: 'online',
-          updatedAt: new Date().getTime()
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
         });
+        pRef.onDisconnect().remove();
       }
+    }
+
+    function startPresenceHeartbeat() {
+      if (presenceInterval) clearInterval(presenceInterval);
+      presenceInterval = setInterval(() => {
+        reportPresenceToCloud();
+      }, 5000);
     }
 
     function startStudentCountdown(startTime, totalSecs) {
@@ -807,14 +942,14 @@
 
       const groupData = currentLessonData[index];
       document.getElementById('current-char-badge').textContent = groupData.char;
-      document.getElementById('current-group-title').textContent = `【第 ${currentGroupId} 組】生字【${groupData.char}】配對任務`;
+      document.getElementById('current-group-title').textContent = `【第 ${currentGroupId || 1} 組】生字【${groupData.char}】配對任務`;
 
       selectedWordCard = null;
       userMatches = {};
 
       const syncKey = `sync_char_${currentCharIndex}`;
       const syncMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
-      const gState = syncMap[currentGroupId];
+      const gState = syncMap[currentGroupId || 1];
 
       const items = groupData.items;
 
@@ -830,23 +965,6 @@
 
       document.body.className = '';
       renderMatchingCards();
-      updateStatusIndicator();
-    }
-
-    function resetCurrentGroupMatching() {
-      if (!isRoundActive) return;
-      selectedWordCard = null;
-      userMatches = {};
-      const groupData = currentLessonData[currentCharIndex];
-      shuffledDefs = groupData.items.map((item, originalIdx) => ({
-        def: item.def,
-        originalIdx: originalIdx
-      })).sort(() => Math.random() - 0.5);
-
-      document.body.className = '';
-      renderMatchingCards();
-
-      saveSyncState(currentGroupId, currentCharIndex, 0, groupData.items.length, false, {}, shuffledDefs);
       updateStatusIndicator();
     }
 
@@ -919,7 +1037,7 @@
       if (matchedCount < totalCount) {
         indicator.className = 'status-alert-box';
         indicator.innerHTML = `<span>⏳ 作答進行中 (${matchedCount}/${totalCount})</span>`;
-        saveSyncState(currentGroupId, currentCharIndex, matchedCount, totalCount, false, userMatches, shuffledDefs);
+        saveSyncState(currentGroupId || 1, currentCharIndex, matchedCount, totalCount, false, userMatches, shuffledDefs);
       } else {
         let correctCount = 0;
         for (let wIdx in userMatches) {
@@ -931,15 +1049,15 @@
 
         if (correctCount === totalCount) {
           indicator.className = 'status-alert-box correct';
-          indicator.innerHTML = `<span>🎉 【第 ${currentGroupId} 組】100% 全對過關！</span>`;
+          indicator.innerHTML = `<span>🎉 【第 ${currentGroupId || 1} 組】100% 全對過關！</span>`;
           document.body.className = 'is-correct-theme';
           triggerConfetti();
           playSuccessSound();
-          saveSyncState(currentGroupId, currentCharIndex, totalCount, totalCount, true, userMatches, shuffledDefs);
+          saveSyncState(currentGroupId || 1, currentCharIndex, totalCount, totalCount, true, userMatches, shuffledDefs);
         } else {
           indicator.className = 'status-alert-box';
           indicator.innerHTML = `<span>⚠️ 答對 ${correctCount}/${totalCount} 題，請再討論調整！</span>`;
-          saveSyncState(currentGroupId, currentCharIndex, correctCount, totalCount, false, userMatches, shuffledDefs);
+          saveSyncState(currentGroupId || 1, currentCharIndex, correctCount, totalCount, false, userMatches, shuffledDefs);
         }
       }
     }
@@ -968,6 +1086,7 @@
 
       if (db) {
         db.ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload);
+        reportPresenceToCloud();
       }
     }
 
@@ -980,7 +1099,7 @@
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+        gain.gain.exponentialRampToValueAtTime(0.00001, duration);
         osc.stop(audioCtx.currentTime + duration);
       } catch (e) {}
     }

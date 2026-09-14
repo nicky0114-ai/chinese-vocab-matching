@@ -817,20 +817,36 @@
     }
 
     // Live Connected Presence Listener
-    const activePresence = {};
+    let activePresence = {};
+    let presenceDataCache = {};
+
     function listenToPresence() {
       if (!db) return;
       db.ref('vocab_rooms/room601/presence').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        for (let gId in data) {
-          activePresence[gId.replace('group_', '')] = true;
-        }
-        renderPresenceBar();
+        presenceDataCache = snapshot.val() || {};
+        updatePresenceState();
       });
+
+      setInterval(updatePresenceState, 3000);
+    }
+
+    function updatePresenceState() {
+      activePresence = {};
+      const now = Date.now();
+      for (let key in presenceDataCache) {
+        const gInfo = presenceDataCache[key];
+        const gId = parseInt(key.replace('group_', ''));
+        // Active if status is online or timestamp updated within 25 seconds
+        if (gInfo && gInfo.status === 'online' && gInfo.updatedAt && (now - gInfo.updatedAt < 25000)) {
+          activePresence[gId] = true;
+        }
+      }
+      renderPresenceBar();
     }
 
     function renderPresenceBar() {
       const container = document.getElementById('presence-bar-container');
+      if (!container) return;
       let html = '<span style="font-size: 13px; color: #c7d2fe; font-weight: 700;">各組連線狀態：</span>';
       for (let g = 1; g <= totalGroupCount; g++) {
         const isOnline = activePresence[g];
