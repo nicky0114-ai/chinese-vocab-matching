@@ -82,6 +82,41 @@
       max-width: 1400px;
       margin: 0 auto;
       width: 100%;
+      position: relative;
+    }
+
+    /* Wait & Lock Overlay */
+    .student-lock-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .student-lock-overlay.hidden {
+      display: none;
+    }
+
+    .lock-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      animation: bouncePulse 2s infinite ease-in-out;
+    }
+
+    @keyframes bouncePulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
     }
 
     .tablet-identity-bar {
@@ -203,6 +238,23 @@
       color: #fff;
     }
 
+    .timer-display-box {
+      background: #0f172a;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .timer-clock {
+      font-size: 28px;
+      font-weight: 900;
+      font-family: monospace;
+      color: #f59e0b;
+    }
+
     .status-alert-box {
       padding: 12px 24px;
       border-radius: 14px;
@@ -306,16 +358,6 @@
       color: #fff;
     }
 
-    .btn-secondary {
-      background: #334155;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 12px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
     #confetti-canvas {
       position: fixed;
       top: 0;
@@ -339,12 +381,21 @@
       </div>
     </div>
     <div style="font-size: 14px; color: #34d399; font-weight: 700;" id="cloud-status-indicator">
-      🌐 雲端連線：已連線 (即時同步大螢幕)
+      🟢 雲端已連線：等待老師下達指令
     </div>
   </header>
 
   <main class="main-container">
     
+    <!-- Lock & Waiting Overlay -->
+    <div class="student-lock-overlay" id="student-lock-overlay">
+      <div class="lock-icon" id="lock-overlay-icon">⏳</div>
+      <h2 style="font-size: 32px; font-weight: 900; color: #a5b4fc;" id="lock-overlay-title">已進入房間，等待老師按「開始」</h2>
+      <p style="font-size: 18px; color: var(--text-muted); margin-top: 12px;" id="lock-overlay-subtitle">
+        【第 <span id="overlay-group-id">1</span> 組】已準備就緒，請抬頭觀看黑板大螢幕...
+      </p>
+    </div>
+
     <div class="tablet-identity-bar">
       <span style="font-weight: 700; color: #a5b4fc; font-size: 17px;">🏷️ 請選擇本台平板的小組：</span>
       <div class="group-id-pills" id="group-id-pills-container">
@@ -364,18 +415,19 @@
         <div class="char-big-badge" id="current-char-badge">裁</div>
         <div>
           <h2 id="current-group-title" style="font-size: 24px; font-weight: 800;">【第 1 組】生字【裁】配對任務</h2>
-          <p style="color: var(--text-muted); margin-top: 4px;">小組討論並完成語詞配對，連線結果會同步傳送至老師大螢幕！</p>
+          <p style="color: var(--text-muted); margin-top: 4px;">老師發布開始後即可作答！連線結果同步至大螢幕。</p>
         </div>
       </div>
 
-      <div style="display: flex; gap: 12px; align-items: center;">
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <div class="timer-display-box">
+          <span style="font-size: 14px; color: var(--text-muted); font-weight: 700;">倒數時間</span>
+          <span class="timer-clock" id="timer-clock">01:00</span>
+        </div>
+
         <div class="status-alert-box" id="status-indicator">
           <span>⏳ 作答進行中 (0/6)</span>
         </div>
-
-        <button class="btn-secondary" onclick="resetCurrentGroupMatching()">
-          🔄 重置本組
-        </button>
       </div>
     </div>
 
@@ -626,11 +678,17 @@
     let userMatches = {};
     let shuffledDefs = [];
 
+    // Master Control States
+    let isRoundActive = false;
+    let roundTimerSeconds = 60;
+    let studentTimerInterval = null;
+
     document.addEventListener('DOMContentLoaded', () => {
       loadSavedSettings();
       renderGroupPills();
       renderCharPills();
       loadGroupMatching(0);
+      listenToMasterControl();
     });
 
     function loadSavedSettings() {
@@ -639,10 +697,7 @@
 
       const savedLessonData = localStorage.getItem('custom_lesson_data');
       if (savedLessonData) {
-        try {
-          currentLessonData = JSON.parse(savedLessonData);
-          document.getElementById('lesson-title-label').textContent = '📍 自訂課次生字清單：';
-        } catch(e) {}
+        try { currentLessonData = JSON.parse(savedLessonData); } catch(e) {}
       }
     }
 
@@ -653,12 +708,14 @@
         pillsHtml += `<button class="group-id-btn ${g === currentGroupId ? 'active' : ''}" onclick="setGroupId(${g})">第 ${g} 組</button>`;
       }
       container.innerHTML = pillsHtml;
+      document.getElementById('overlay-group-id').textContent = currentGroupId;
     }
 
     function setGroupId(gId) {
       currentGroupId = gId;
       renderGroupPills();
       loadGroupMatching(currentCharIndex);
+      reportPresenceToCloud();
     }
 
     function renderCharPills() {
@@ -668,6 +725,79 @@
           ${data.char}
         </button>
       `).join('');
+    }
+
+    // Listen to Teacher Master Broadcast State
+    function listenToMasterControl() {
+      if (!db) return;
+
+      reportPresenceToCloud();
+
+      db.ref('vocab_rooms/room601/control').on('value', (snapshot) => {
+        const ctrl = snapshot.val() || { state: 'waiting', targetCharIndex: 0, timerSeconds: 60 };
+        
+        const overlay = document.getElementById('student-lock-overlay');
+        const overlayIcon = document.getElementById('lock-overlay-icon');
+        const overlayTitle = document.getElementById('lock-overlay-title');
+        const overlaySub = document.getElementById('lock-overlay-subtitle');
+
+        if (ctrl.targetCharIndex !== undefined && ctrl.targetCharIndex !== currentCharIndex) {
+          loadGroupMatching(ctrl.targetCharIndex);
+        }
+
+        roundTimerSeconds = ctrl.timerSeconds || 60;
+
+        if (ctrl.state === 'active') {
+          isRoundActive = true;
+          overlay.classList.add('hidden');
+          startStudentCountdown(ctrl.startTime, ctrl.timerSeconds);
+        } else if (ctrl.state === 'ended') {
+          isRoundActive = false;
+          if (studentTimerInterval) clearInterval(studentTimerInterval);
+          overlay.classList.remove('hidden');
+          overlayIcon.textContent = '⏰';
+          overlayTitle.textContent = '作答時間到！';
+          overlaySub.textContent = `【第 ${currentGroupId} 組】請抬頭觀看黑板大螢幕進行檢討！`;
+        } else { // waiting
+          isRoundActive = false;
+          if (studentTimerInterval) clearInterval(studentTimerInterval);
+          overlay.classList.remove('hidden');
+          overlayIcon.textContent = '⏳';
+          overlayTitle.textContent = '已進入房間，等待老師發布指令';
+          overlaySub.textContent = `【第 ${currentGroupId} 組】準備就緒！請看黑板大螢幕等待老師按「開始」...`;
+        }
+      });
+    }
+
+    function reportPresenceToCloud() {
+      if (db) {
+        db.ref(`vocab_rooms/room601/presence/group_${currentGroupId}`).set({
+          groupId: currentGroupId,
+          status: 'online',
+          updatedAt: new Date().getTime()
+        });
+      }
+    }
+
+    function startStudentCountdown(startTime, totalSecs) {
+      if (studentTimerInterval) clearInterval(studentTimerInterval);
+
+      const updateClock = () => {
+        const elapsed = Math.floor((new Date().getTime() - (startTime || new Date().getTime())) / 1000);
+        const rem = Math.max(0, totalSecs - elapsed);
+
+        const mins = Math.floor(rem / 60);
+        const secs = rem % 60;
+        document.getElementById('timer-clock').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (rem === 0 && isRoundActive) {
+          isRoundActive = false;
+          clearInterval(studentTimerInterval);
+        }
+      };
+
+      updateClock();
+      studentTimerInterval = setInterval(updateClock, 1000);
     }
 
     function loadGroupMatching(index) {
@@ -704,6 +834,7 @@
     }
 
     function resetCurrentGroupMatching() {
+      if (!isRoundActive) return;
       selectedWordCard = null;
       userMatches = {};
       const groupData = currentLessonData[currentCharIndex];
@@ -757,12 +888,14 @@
     }
 
     function handleWordClick(wIdx) {
+      if (!isRoundActive) return;
       selectedWordCard = wIdx;
       renderMatchingCards();
       playBeep(440, 0.05);
     }
 
     function handleDefClick(dIdx) {
+      if (!isRoundActive) return;
       if (selectedWordCard === null) {
         alert("請先點選左側語詞，再點選釋義對應！");
         return;
@@ -833,11 +966,8 @@
       syncMap[gId] = payload;
       localStorage.setItem(syncKey, JSON.stringify(syncMap));
 
-      // Push real-time cloud data to Firebase Database
       if (db) {
-        db.ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload)
-          .then(() => { console.log("Cloud sync push success!"); })
-          .catch(err => { console.error("Cloud push err:", err); });
+        db.ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload);
       }
     }
 

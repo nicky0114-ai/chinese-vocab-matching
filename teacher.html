@@ -119,6 +119,53 @@
       display: block;
     }
 
+    /* Teacher Master Broadcast Panel */
+    .master-broadcast-card {
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border: 2px solid #6366f1;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.25);
+    }
+
+    .master-control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .connected-groups-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .presence-badge {
+      background: #334155;
+      color: #94a3b8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .presence-badge.online {
+      background: #059669;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    }
+
     /* Review Dashboard Grid */
     .groups-review-grid {
       display: grid;
@@ -233,8 +280,23 @@
       resize: vertical;
     }
 
-    .btn-action {
+    .btn-start {
       background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
       color: white;
       border: none;
       padding: 12px 24px;
@@ -242,23 +304,17 @@
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
 
     .btn-danger {
       background: linear-gradient(135deg, #ef4444, #dc2626);
       color: white;
       border: none;
-      padding: 10px 20px;
+      padding: 12px 24px;
       border-radius: 12px;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
     .btn-secondary {
@@ -282,7 +338,7 @@
       </div>
     </div>
     <div style="font-size: 14px; color: #34d399; font-weight: 700;" id="teacher-cloud-status">
-      🟢 雲端跨裝置即時監聽中 (毫秒級同步)
+      🟢 雲端跨裝置即時連線中
     </div>
 
     <nav class="nav-tabs">
@@ -297,24 +353,60 @@
 
   <main class="main-container">
     
+    <!-- MASTER BROADCAST CONTROL CARD -->
+    <div class="master-broadcast-card">
+      <div class="master-control-row">
+        <div>
+          <h3 style="font-size: 20px; font-weight: 900; color: #a5b4fc;">🎮 全班課堂廣播主控台</h3>
+          <p style="color: #c7d2fe; font-size: 14px; margin-top: 4px;">先請各組進入房間，由老師統一按「開始作答」，全班平板同步解鎖倒數！</p>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <button class="btn-start" onclick="broadcastStartRound()">
+            ▶️ 1. 發布並統一開始作答！
+          </button>
+          <button class="btn-danger" onclick="broadcastEndRound()">
+            ⏹️ 2. 強制結束作答（鎖定平板）
+          </button>
+          <button class="btn-secondary" onclick="broadcastResetRound()">
+            🔄 3. 重置本字（準備下一輪）
+          </button>
+        </div>
+      </div>
+
+      <div class="master-control-row" style="border-top: 1px solid rgba(99, 102, 241, 0.3); padding-top: 16px;">
+        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <span style="font-weight: 700; color: var(--accent);">挑戰生字：</span>
+          <select id="review-char-select" onchange="changeReviewCharacter(this.value)" style="background: #0f172a; color: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 700;">
+            <!-- Dynamic options -->
+          </select>
+
+          <span style="font-weight: 700; color: var(--accent); margin-left: 12px;">限定時間：</span>
+          <select id="master-timer-select" style="background: #0f172a; color: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 700;">
+            <option value="30">30 秒 (極速)</option>
+            <option value="60" selected>60 秒 (標準)</option>
+            <option value="90">90 秒 (充裕)</option>
+            <option value="120">120 秒 (輕鬆)</option>
+          </select>
+        </div>
+
+        <!-- Live Connected Presence Bar -->
+        <div class="connected-groups-bar" id="presence-bar-container">
+          <span style="font-size: 13px; color: #c7d2fe; font-weight: 700;">各組連線狀態：</span>
+          <!-- Dynamic presence badges -->
+        </div>
+      </div>
+    </div>
+
     <!-- VIEW 1: SYNCHRONIZED REVIEW DASHBOARD VIEW -->
     <section id="view-review" class="view-panel active">
-      <div style="background: var(--card-bg); padding: 24px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-          <div>
-            <h2 style="font-size: 24px; font-weight: 800;" id="review-title-display">【裁】字全班各組作答對比與檢討</h2>
-            <p style="color: var(--text-muted); margin-top: 4px;">大螢幕同步對比各組連線細節！學生在手機/平板作答時此處會自動即時更新。</p>
-          </div>
-          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-            <span style="font-weight: 700; color: var(--accent);">切換檢討生字：</span>
-            <select id="review-char-select" onchange="changeReviewCharacter(this.value)" style="background: #0f172a; color: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 700;">
-              <!-- Dynamic options -->
-            </select>
-
-            <button class="btn-danger" onclick="resetCurrentCharAllGroups()">
-              🔄 重置本字全班紀錄（再次挑戰）
-            </button>
-          </div>
+      <div style="background: var(--card-bg); padding: 20px 24px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h2 style="font-size: 22px; font-weight: 800;" id="review-title-display">【裁】字全班各組作答對比與檢討</h2>
+          <p style="color: var(--text-muted); margin-top: 4px;">大螢幕同步對比各組連線細節！學生在手機/平板作答時此處會自動即時更新。</p>
+        </div>
+        <div style="font-size: 24px; font-weight: 900; color: #f59e0b; background: #0f172a; padding: 8px 20px; border-radius: 12px; border: 1px solid var(--border);" id="master-timer-clock">
+          ⏱️ 倒數 01:00
         </div>
       </div>
 
@@ -392,7 +484,6 @@
   </main>
 
   <script>
-    // Firebase Setup for Teacher Realtime Cloud Sync
     const firebaseConfig = {
       databaseURL: "https://chinese-vocab-match-default-rtdb.firebaseio.com"
     };
@@ -612,10 +703,12 @@
     let currentLessonData = [...defaultLessonData];
     let totalGroupCount = 7;
     let currentCharIndex = 0;
+    let masterTimerInterval = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       loadSavedSettings();
       populateReviewSelect();
+      listenToPresence();
       listenToCloudUpdates(0);
       renderSyncReviewGrid(0);
     });
@@ -649,6 +742,7 @@
     function updateGroupCountSetting(val) {
       totalGroupCount = parseInt(val);
       localStorage.setItem('custom_group_count', totalGroupCount);
+      renderPresenceBar();
       renderSyncReviewGrid(currentCharIndex);
     }
 
@@ -663,7 +757,88 @@
       renderSyncReviewGrid(currentCharIndex);
     }
 
-    // Active Listener to Firebase Cloud DB
+    // Master Broadcast Commands
+    function broadcastStartRound() {
+      const timerSecs = parseInt(document.getElementById('master-timer-select').value || '60');
+      const startTime = new Date().getTime();
+
+      if (db) {
+        db.ref('vocab_rooms/room601/control').set({
+          state: 'active',
+          targetCharIndex: currentCharIndex,
+          timerSeconds: timerSecs,
+          startTime: startTime
+        });
+      }
+
+      startMasterClock(startTime, timerSecs);
+    }
+
+    function broadcastEndRound() {
+      if (db) {
+        db.ref('vocab_rooms/room601/control/state').set('ended');
+      }
+      if (masterTimerInterval) clearInterval(masterTimerInterval);
+      document.getElementById('master-timer-clock').textContent = '⏰ 作答結束！';
+    }
+
+    function broadcastResetRound() {
+      if (db) {
+        db.ref('vocab_rooms/room601/control').set({
+          state: 'waiting',
+          targetCharIndex: currentCharIndex,
+          timerSeconds: parseInt(document.getElementById('master-timer-select').value || '60')
+        });
+      }
+      if (masterTimerInterval) clearInterval(masterTimerInterval);
+      document.getElementById('master-timer-clock').textContent = '⏱️ 等待發布作答';
+      resetCurrentCharAllGroups();
+    }
+
+    function startMasterClock(startTime, totalSecs) {
+      if (masterTimerInterval) clearInterval(masterTimerInterval);
+
+      const updateClock = () => {
+        const elapsed = Math.floor((new Date().getTime() - startTime) / 1000);
+        const rem = Math.max(0, totalSecs - elapsed);
+
+        const mins = Math.floor(rem / 60);
+        const secs = rem % 60;
+        document.getElementById('master-timer-clock').textContent = `⏱️ 倒數 ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (rem === 0) {
+          clearInterval(masterTimerInterval);
+          broadcastEndRound();
+        }
+      };
+
+      updateClock();
+      masterTimerInterval = setInterval(updateClock, 1000);
+    }
+
+    // Live Connected Presence Listener
+    const activePresence = {};
+    function listenToPresence() {
+      if (!db) return;
+      db.ref('vocab_rooms/room601/presence').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        for (let gId in data) {
+          activePresence[gId.replace('group_', '')] = true;
+        }
+        renderPresenceBar();
+      });
+    }
+
+    function renderPresenceBar() {
+      const container = document.getElementById('presence-bar-container');
+      let html = '<span style="font-size: 13px; color: #c7d2fe; font-weight: 700;">各組連線狀態：</span>';
+      for (let g = 1; g <= totalGroupCount; g++) {
+        const isOnline = activePresence[g];
+        html += `<span class="presence-badge ${isOnline ? 'online' : ''}">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
+      }
+      container.innerHTML = html;
+    }
+
     let currentDbRef = null;
     function listenToCloudUpdates(cIdx) {
       if (!db) return;
@@ -800,17 +975,14 @@
     }
 
     function resetCurrentCharAllGroups() {
-      if (confirm(`確定要「重置【${currentLessonData[currentCharIndex].char}】字」的全班紀錄，讓全班再挑戰一次嗎？`)) {
-        const syncKey = `sync_char_${currentCharIndex}`;
-        localStorage.removeItem(syncKey);
+      const syncKey = `sync_char_${currentCharIndex}`;
+      localStorage.removeItem(syncKey);
 
-        if (db) {
-          db.ref(`vocab_rooms/room601/char_${currentCharIndex}`).remove();
-        }
-
-        renderSyncReviewGrid(currentCharIndex);
-        alert(`已成功重置【${currentLessonData[currentCharIndex].char}】字！全班可以重新開始配對挑戰。`);
+      if (db) {
+        db.ref(`vocab_rooms/room601/char_${currentCharIndex}`).remove();
       }
+
+      renderSyncReviewGrid(currentCharIndex);
     }
 
     function clearAllSyncData() {
