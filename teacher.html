@@ -826,22 +826,19 @@
         presenceDataCache = snapshot.val() || {};
         updatePresenceState();
       });
-
-      setInterval(updatePresenceState, 3000);
     }
 
     function updatePresenceState() {
       activePresence = {};
-      const now = Date.now();
       for (let key in presenceDataCache) {
         const gInfo = presenceDataCache[key];
-        const gId = parseInt(key.replace('group_', ''));
-        // Active if status is online or timestamp updated within 25 seconds
-        if (gInfo && gInfo.status === 'online' && gInfo.updatedAt && (now - gInfo.updatedAt < 25000)) {
-          activePresence[gId] = true;
+        if (gInfo) {
+          const gId = gInfo.groupId || parseInt(key.replace('group_', ''));
+          if (gId) activePresence[gId] = true;
         }
       }
       renderPresenceBar();
+      renderSyncReviewGrid(currentCharIndex);
     }
 
     function renderPresenceBar() {
@@ -893,16 +890,19 @@
 
       for (let g = 1; g <= totalGroupCount; g++) {
         const gState = syncMap[g];
+        const isGroupConnected = activePresence[g];
         
         if (!gState || !gState.userMatches || Object.keys(gState.userMatches).length === 0) {
           htmlArray.push(`
-            <div class="group-review-card is-empty">
+            <div class="group-review-card ${isGroupConnected ? '' : 'is-empty'}" style="${isGroupConnected ? 'border-color: #6366f1; background: #1e1b4b;' : ''}">
               <div class="group-review-title">
                 <span>第 ${g} 組</span>
-                <span style="font-size: 13px; font-weight: 700; color: #64748b;">⏳ 尚未開始作答</span>
+                <span style="font-size: 13px; font-weight: 700; color: ${isGroupConnected ? '#34d399' : '#64748b'};">
+                  ${isGroupConnected ? '🟢 已連線進入房間' : '⚪ 未連線'}
+                </span>
               </div>
-              <div style="padding: 24px; text-align: center; color: #64748b; font-size: 14px;">
-                等待小組在平板上連線配對...
+              <div style="padding: 24px; text-align: center; color: ${isGroupConnected ? '#a5b4fc' : '#64748b'}; font-size: 15px; font-weight: 700;">
+                ${isGroupConnected ? '📱 平板已就緒，等待老師發布「開始作答」' : '⏳ 等待小組在平板上點選組別進入...'}
               </div>
             </div>
           `);
