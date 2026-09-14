@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生字語詞小組配對 - 學生平板端</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <!-- Firebase CDN for Real-time Cloud Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background-color 0.5s ease;
+    }
+
+    body.is-correct-theme {
+      background-color: #064e3b !important;
+    }
+
+    .app-header {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      font-size: 28px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .main-container {
+      flex: 1;
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tablet-identity-bar {
+      background: #1e1b4b;
+      border: 2px solid #6366f1;
+      border-radius: 16px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .group-id-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .group-id-btn {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .group-id-btn.active {
+      background: #4f46e5;
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 0 12px rgba(79, 70, 229, 0.5);
+    }
+
+    .group-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .group-label {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .char-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .char-pill {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .char-pill.active {
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+      transform: scale(1.05);
+    }
+
+    .matching-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 20px 28px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .group-title-tag {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .char-big-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .status-alert-box {
+      padding: 12px 24px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #334155;
+      color: #cbd5e1;
+      transition: all 0.3s ease;
+    }
+
+    .status-alert-box.correct {
+      background: #059669 !important;
+      color: #ffffff !important;
+      font-size: 22px !important;
+      padding: 16px 32px !important;
+      box-shadow: 0 0 30px #10b981;
+    }
+
+    .matching-board {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .matching-board {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .board-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .col-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .item-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 80px;
+    }
+
+    .item-card.selected {
+      border-color: #a855f7;
+      background: #2e1065;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .item-card.matched {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    .word-text {
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .def-text {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+
+    .match-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .item-card.matched .match-badge {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #334155;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">📱</span>
+      <div>
+        <h1 class="brand-title">生字語詞小組配對 - 學生平板端</h1>
+      </div>
+    </div>
+    <div style="font-size: 14px; color: var(--accent); font-weight: 700;" id="cloud-status-indicator">
+      🌐 雲端連線狀態：同步中
+    </div>
+  </header>
+
+  <main class="main-container">
+    
+    <div class="tablet-identity-bar">
+      <span style="font-weight: 700; color: #a5b4fc; font-size: 17px;">🏷️ 請選擇本台平板的小組：</span>
+      <div class="group-id-pills" id="group-id-pills-container">
+        <!-- Dynamic group pills -->
+      </div>
+    </div>
+
+    <div class="group-selector-bar">
+      <span class="group-label" id="lesson-title-label">📍 本課生字：</span>
+      <div class="char-pills" id="char-pills-container">
+        <!-- Dynamically populated char pills -->
+      </div>
+    </div>
+
+    <div class="matching-header">
+      <div class="group-title-tag">
+        <div class="char-big-badge" id="current-char-badge">裁</div>
+        <div>
+          <h2 id="current-group-title" style="font-size: 24px; font-weight: 800;">【第 1 組】生字【裁】配對任務</h2>
+          <p style="color: var(--text-muted); margin-top: 4px;">小組討論並完成語詞配對，連線結果會同步傳送至老師大螢幕！</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div class="status-alert-box" id="status-indicator">
+          <span>⏳ 作答進行中 (0/6)</span>
+        </div>
+
+        <button class="btn-secondary" onclick="resetCurrentGroupMatching()">
+          🔄 重置本組
+        </button>
+      </div>
+    </div>
+
+    <div class="matching-board">
+      <div class="board-column">
+        <div class="col-title">
+          <span>📌 語詞卡片 (點擊選擇)</span>
+        </div>
+        <div id="words-list" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Words Cards -->
+        </div>
+      </div>
+
+      <div class="board-column">
+        <div class="col-title">
+          <span>📖 詞義解釋卡片 (點擊對應)</span>
+        </div>
+        <div id="defs-list" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Definitions Cards -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Firebase Realtime DB Setup for cross-device sync
+    const firebaseConfig = {
+      databaseURL: "https://chinese-vocab-match-default-rtdb.firebaseio.com"
+    };
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    } catch(e) {}
+
+    const defaultLessonData = [
+      {
+        char: "裁",
+        items: [
+          { word: "裁縫", def: "裁剪並縫製衣服，或指從事這種工作的人。" },
+          { word: "裁員", def: "因業務縮減而減少工作人員。" },
+          { word: "裁判", def: "體育比賽中負責評判勝負的執法人員，也比喻評判是非的人。" },
+          { word: "體裁", def: "詩歌、散文、小說等文章的寫作樣式或結構。" },
+          { word: "獨裁", def: "獨自掌握政治權力，實行專制統治。" },
+          { word: "獨出心裁(成語)", def: "比喻構思獨特，與眾不同。" }
+        ]
+      },
+      {
+        char: "茂",
+        items: [
+          { word: "茂密", def: "草木繁多而茂盛。" },
+          { word: "茂盛", def: "植物生長繁茂。" },
+          { word: "豐茂", def: "形容土地肥沃，草木生長旺盛。" },
+          { word: "根深葉茂", def: "植物根基深、枝葉茂密。比喻基礎穩固而發展興旺。" },
+          { word: "聲情並茂", def: "形容演唱、朗誦或演說時的聲音和感情都非常生動感人。" },
+          { word: "圖文並茂(成語)", def: "書籍、報告或海報中，圖畫與文字都非常豐富精采。" }
+        ]
+      },
+      {
+        char: "藤",
+        items: [
+          { word: "藤蔓", def: "藤本植物攀爬蔓延的細莖。" },
+          { word: "藤椅", def: "用藤條編織成的椅子，通風涼快。" },
+          { word: "紫藤", def: "一種美麗的蔓生攀緣灌木，春季開紫藍色花。" },
+          { word: "蔓藤", def: "植物細長且攀附他物的莖。" },
+          { word: "葛藤", def: "一種蔓生植物，在文學中常比喻事情糾纏不清或人際關係複雜。" },
+          { word: "順藤摸瓜(成語)", def: "沿著藤蔓去尋找西瓜。比喻沿著線索追根究底，查明事實真相。" }
+        ]
+      },
+      {
+        char: "蔓",
+        items: [
+          { word: "蔓延", def: "像蔓草般向四周延展滋生，比喻事物擴散開來。" },
+          { word: "蔓生", def: "藤蔓植物攀附他物成長的特性。" },
+          { word: "枝蔓", def: "比喻文章或說話中多餘且糾纏不清的分支細節。" },
+          { word: "蔓草", def: "蔓延滋生的草，常比喻繁雜或荒蕪的景象。" },
+          { word: "蔓藤", def: "細長而能纏繞他物的植物莖。" },
+          { word: "蔓草荒煙(成語)", def: "形容荒涼冷落的景象。" }
+        ]
+      },
+      {
+        char: "掀",
+        items: [
+          { word: "掀開", def: "揭開覆蓋在上面的東西。" },
+          { word: "掀起", def: "揭開，或比喻激起浪潮、風波。" },
+          { word: "掀動", def: "翻動、抖動，如風掀動窗簾。" },
+          { word: "掀天", def: "形容氣勢極大，能震動天地。" },
+          { word: "掀騰", def: "掀動、喧鬧或翻騰。" },
+          { word: "掀天揭地(成語)", def: "形容聲勢極其浩大，或做出的事業非常偉大。" }
+        ]
+      },
+      {
+        char: "悉",
+        items: [
+          { word: "悉心", def: "盡心、全心全意。" },
+          { word: "熟悉", def: "非常了解、知道得很清楚。" },
+          { word: "獲悉", def: "得到消息或知曉某事。" },
+          { word: "悉數", def: "全部的數量，或將所有東西列舉出來。" },
+          { word: "洞悉", def: "清楚而透徹地明白、看穿。" },
+          { word: "悉心照料(成語)", def: "盡心盡力、無微不至地照顧。" }
+        ]
+      },
+      {
+        char: "添",
+        items: [
+          { word: "添加", def: "增加進去。" },
+          { word: "添油加醋", def: "比喻說話時為了增添渲染效果，在內容中加入誇張或虛構的成分。" },
+          { word: "增添", def: "加多、增益，如「增添色彩」。" },
+          { word: "添置", def: "增加購買、備置。" },
+          { word: "錦上添花(成語)", def: "比喻好上加好，使原本就美好的事物更加完美。" }
+        ]
+      },
+      {
+        char: "免",
+        items: [
+          { word: "避免", def: "防止、設法使不發生。" },
+          { word: "免稅", def: "免除應繳納的稅金。" },
+          { word: "免除", def: "省去、撤除，如「免除職務」。" },
+          { word: "免費", def: "不收取費用。" },
+          { word: "難免", def: "不容易避免，多用於形容必然會發生的某種不理想情況。" },
+          { word: "在所難免(成語)", def: "無論如何很難免除、避免。" }
+        ]
+      },
+      {
+        char: "隙",
+        items: [
+          { word: "縫隙", def: "狹窄的空隙或裂紋。" },
+          { word: "空隙", def: "閒置的空間或時間，也指事情的漏洞。" },
+          { word: "嫌隙", def: "因猜疑、誤會而產生的意見不合與怨恨。" },
+          { word: "隙地", def: "空地、未被利用的土地。" },
+          { word: "白駒過隙(成語)", def: "比喻時間流逝極快。" }
+        ]
+      },
+      {
+        char: "尚",
+        items: [
+          { word: "崇尚", def: "尊崇、嚮往並注重。" },
+          { word: "時尚", def: "當前流行的風氣或風格。" },
+          { word: "尚且", def: "副詞，表示進一步的論述，連...都...（通常與何況呼應）。" },
+          { word: "尚可", def: "還算可以、合格。" },
+          { word: "高尚", def: "道德品質清高、尊貴。" },
+          { word: "禮尚往來(成語)", def: "禮節上注重有來有往。指人與人之間的友好互動需要互惠。" }
+        ]
+      },
+      {
+        char: "櫃",
+        items: [
+          { word: "櫃檯", def: "商家或辦公室用來接待顧客、辦理手續的長桌。" },
+          { word: "書櫃", def: "專門存放書本的櫃子。" },
+          { word: "衣櫃", def: "用來收納衣服的家具。" },
+          { word: "櫥櫃", def: "裝有玻璃門或多格抽屜的櫃子，用來展示或儲存餐具、雜物。" },
+          { word: "掌櫃", def: "商店中負責管理財務或日常營運的負責人。" },
+          { word: "翻箱倒櫃(成語)", def: "翻動箱子，倒出櫃子裡的東西。形容徹底搜查、翻找得很混亂的樣子。" }
+        ]
+      },
+      {
+        char: "稿",
+        items: [
+          { word: "稿件", def: "寫好準備出版或發表的作品底稿。" },
+          { word: "稿費", def: "出版機構付給創作者的文字或圖像報酬。" },
+          { word: "草稿", def: "初步擬定的文字或圖畫底稿，尚未定案。" },
+          { word: "撰稿", def: "起草、編寫文章。" },
+          { word: "脫稿", def: "完成文章、畫作的寫作或繪製工作。" },
+          { word: "腹中打稿(成語)", def: "在動筆寫作或做事之前，先在心裡構思、規劃好大綱。" }
+        ]
+      },
+      {
+        char: "顫",
+        items: [
+          { word: "顫抖", def: "身體顫動、發抖（國語簡編本標準讀音為ㄓㄢˋ ㄉㄡˇ）。" },
+          { word: "顫慄", def: "身體因恐懼、寒冷或極度興奮而發抖。" },
+          { word: "顫動", def: "物體快速搖動、振動。" },
+          { word: "冷顫", def: "身體因突然受冷或緊張而發抖。" },
+          { word: "心驚膽顫(成語)", def: "形容十分驚慌害怕。" }
+        ]
+      },
+      {
+        char: "暮",
+        items: [
+          { word: "暮色", def: "傍晚昏暗的天色。" },
+          { word: "暮光", def: "太陽剛落山或剛升起時的微弱光線。" },
+          { word: "年暮", def: "一年將盡的時候，或比喻人到了晚年。" },
+          { word: "垂暮", def: "比喻晚年或事物的衰落。" },
+          { word: "暮鼓晨鐘(成語)", def: "佛寺中傍晚擊鼓，早晨敲鐘。比喻使人覺悟的言論。" }
+        ]
+      },
+      {
+        char: "肩",
+        items: [
+          { word: "肩膀", def: "脖子兩旁與手臂相連的部分。" },
+          { word: "肩負", def: "擔負、承受重任，如「肩負重任」。" },
+          { word: "比肩", def: "並肩而行。比喻地位相等或關係密切。" },
+          { word: "肩章", def: "佩戴在軍人、警察等制服肩膀上的徽章。" },
+          { word: "擦肩而過", def: "形容距離極近地掠過或錯過。" },
+          { word: "比肩繼踵(成語)", def: "肩並肩，腳尖碰腳跟。形容人很多，非常擁擁擠。" }
+        ]
+      },
+      {
+        char: "絨",
+        items: [
+          { word: "絨毛", def: "細小而柔軟的短毛。" },
+          { word: "羽絨", def: "羽毛根部的細軟絨毛，常用來填充防寒衣物。" },
+          { word: "絨線", def: "編織衣物用的毛線，或指帶絨的絲線。" },
+          { word: "天鵝絨", def: "一種質地柔軟、富有光澤的絲織品。" },
+          { word: "絨毛玩具", def: "外面是布料或絨面，內部填充棉花等軟物的玩具。" },
+          { word: "細軟如絨(成語)", def: "形容物體質地非常細緻、柔軟，就像絲絨一樣。" }
+        ]
+      },
+      {
+        char: "咂",
+        items: [
+          { word: "咂嘴", def: "用舌頭抵住上顎發出聲音，表示驚奇、讚嘆或惋惜。" },
+          { word: "咂摸", def: "仔細品嚐，引申為用心琢磨、細細體會。" },
+          { word: "咂酒", def: "指吸吮、品嚐美酒。" },
+          { word: "咂嘴弄舌", def: "形容吃得津津有味，或指說話囉唆、搬弄是非。" },
+          { word: "咂一嘴", def: "品嚐一下、吸吮一口。" },
+          { word: "咂嘴咂舌(成語)", def: "形容吃得津津有味，或對某事表示驚嘆、羨慕或可惜的樣子。" }
+        ]
+      },
+      {
+        char: "瀉",
+        items: [
+          { word: "傾瀉", def: "液體從高處急速流下，如「瀑布傾瀉而下」。" },
+          { word: "瀉藥", def: "能促進排便的藥物。" },
+          { word: "腹瀉", def: "拉肚子，指排便次數增多且糞便稀薄。" },
+          { word: "流瀉", def: "月光、水流等流淌、流布的樣子，如「月光流瀉而下」。" },
+          { word: "上吐下瀉", def: "又吐又拉，指嚴重的腸胃病症狀。" },
+          { word: "一瀉千里(成語)", def: "形容水流速度極快，向下奔流。也比喻文章氣勢奔放，或局勢急劇下滑。" }
+        ]
+      },
+      {
+        char: "賴",
+        items: [
+          { word: "依賴", def: "依靠他人或事物而不能獨立。" },
+          { word: "耍賴", def: "不承認自己的言行或錯誤，企圖逃避責任。" },
+          { word: "賴帳", def: "不承認欠下的債務。" },
+          { word: "賴以為生", def: "依靠某種方式來維持生命或生活。" },
+          { word: "誣賴", def: "無中生有地陷害、指責他人。" },
+          { word: "百無聊賴(成語)", def: "形容非常無聊，或者生活寂寞潦倒而無所寄託。" }
+        ]
+      }
+    ];
+
+    let currentLessonData = [...defaultLessonData];
+    let totalGroupCount = 7;
+    let currentGroupId = 1;
+    let currentCharIndex = 0;
+    let selectedWordCard = null;
+    let userMatches = {};
+    let shuffledDefs = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSavedSettings();
+      renderGroupPills();
+      renderCharPills();
+      loadGroupMatching(0);
+    });
+
+    function loadSavedSettings() {
+      const savedGroups = localStorage.getItem('custom_group_count');
+      if (savedGroups) totalGroupCount = parseInt(savedGroups);
+
+      const savedLessonData = localStorage.getItem('custom_lesson_data');
+      if (savedLessonData) {
+        try {
+          currentLessonData = JSON.parse(savedLessonData);
+          document.getElementById('lesson-title-label').textContent = '📍 自訂課次生字清單：';
+        } catch(e) {}
+      }
+    }
+
+    function renderGroupPills() {
+      const container = document.getElementById('group-id-pills-container');
+      let pillsHtml = '';
+      for (let g = 1; g <= totalGroupCount; g++) {
+        pillsHtml += `<button class="group-id-btn ${g === currentGroupId ? 'active' : ''}" onclick="setGroupId(${g})">第 ${g} 組</button>`;
+      }
+      container.innerHTML = pillsHtml;
+    }
+
+    function setGroupId(gId) {
+      currentGroupId = gId;
+      renderGroupPills();
+      loadGroupMatching(currentCharIndex);
+    }
+
+    function renderCharPills() {
+      const container = document.getElementById('char-pills-container');
+      container.innerHTML = currentLessonData.map((data, idx) => `
+        <button class="char-pill ${idx === currentCharIndex ? 'active' : ''}" onclick="loadGroupMatching(${idx})">
+          ${data.char}
+        </button>
+      `).join('');
+    }
+
+    function loadGroupMatching(index) {
+      if (index >= currentLessonData.length) index = 0;
+      currentCharIndex = index;
+      renderCharPills();
+
+      const groupData = currentLessonData[index];
+      document.getElementById('current-char-badge').textContent = groupData.char;
+      document.getElementById('current-group-title').textContent = `【第 ${currentGroupId} 組】生字【${groupData.char}】配對任務`;
+
+      selectedWordCard = null;
+      userMatches = {};
+
+      const syncKey = `sync_char_${currentCharIndex}`;
+      const syncMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
+      const gState = syncMap[currentGroupId];
+
+      const items = groupData.items;
+
+      if (gState && gState.userMatches) {
+        userMatches = gState.userMatches;
+        shuffledDefs = gState.shuffledDefs || [];
+      } else {
+        shuffledDefs = items.map((item, originalIdx) => ({
+          def: item.def,
+          originalIdx: originalIdx
+        })).sort(() => Math.random() - 0.5);
+      }
+
+      document.body.className = '';
+      renderMatchingCards();
+      updateStatusIndicator();
+    }
+
+    function resetCurrentGroupMatching() {
+      selectedWordCard = null;
+      userMatches = {};
+      const groupData = currentLessonData[currentCharIndex];
+      shuffledDefs = groupData.items.map((item, originalIdx) => ({
+        def: item.def,
+        originalIdx: originalIdx
+      })).sort(() => Math.random() - 0.5);
+
+      document.body.className = '';
+      renderMatchingCards();
+
+      saveSyncState(currentGroupId, currentCharIndex, 0, groupData.items.length, false, {}, shuffledDefs);
+      updateStatusIndicator();
+    }
+
+    function renderMatchingCards() {
+      const groupData = currentLessonData[currentCharIndex];
+      const wordsContainer = document.getElementById('words-list');
+      const defsContainer = document.getElementById('defs-list');
+
+      wordsContainer.innerHTML = groupData.items.map((item, wIdx) => {
+        const matchedDefIdx = userMatches[wIdx];
+        const isMatched = matchedDefIdx !== undefined;
+        const isSelected = selectedWordCard === wIdx;
+
+        return `
+          <div class="item-card ${isSelected ? 'selected' : ''} ${isMatched ? 'matched' : ''}" onclick="handleWordClick(${wIdx})">
+            <span class="word-text">${item.word}</span>
+            <div class="match-badge">${isMatched ? '✓' : wIdx + 1}</div>
+          </div>
+        `;
+      }).join('');
+
+      defsContainer.innerHTML = shuffledDefs.map((defObj, dIdx) => {
+        let matchedWordIdx = null;
+        for (let wIdx in userMatches) {
+          if (userMatches[wIdx] === dIdx) {
+            matchedWordIdx = parseInt(wIdx);
+            break;
+          }
+        }
+        const isMatched = matchedWordIdx !== null;
+
+        return `
+          <div class="item-card ${isMatched ? 'matched' : ''}" onclick="handleDefClick(${dIdx})">
+            <span class="def-text">${defObj.def}</span>
+            <div class="match-badge">${isMatched ? (matchedWordIdx + 1) : String.fromCharCode(65 + dIdx)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleWordClick(wIdx) {
+      selectedWordCard = wIdx;
+      renderMatchingCards();
+      playBeep(440, 0.05);
+    }
+
+    function handleDefClick(dIdx) {
+      if (selectedWordCard === null) {
+        alert("請先點選左側語詞，再點選釋義對應！");
+        return;
+      }
+
+      userMatches[selectedWordCard] = dIdx;
+      selectedWordCard = null;
+
+      renderMatchingCards();
+      checkMatchingProgress();
+      playBeep(587, 0.08);
+    }
+
+    function checkMatchingProgress() {
+      const groupData = currentLessonData[currentCharIndex];
+      const totalCount = groupData.items.length;
+      const matchedCount = Object.keys(userMatches).length;
+
+      const indicator = document.getElementById('status-indicator');
+
+      if (matchedCount < totalCount) {
+        indicator.className = 'status-alert-box';
+        indicator.innerHTML = `<span>⏳ 作答進行中 (${matchedCount}/${totalCount})</span>`;
+        saveSyncState(currentGroupId, currentCharIndex, matchedCount, totalCount, false, userMatches, shuffledDefs);
+      } else {
+        let correctCount = 0;
+        for (let wIdx in userMatches) {
+          const dIdx = userMatches[wIdx];
+          if (shuffledDefs[dIdx].originalIdx === parseInt(wIdx)) {
+            correctCount++;
+          }
+        }
+
+        if (correctCount === totalCount) {
+          indicator.className = 'status-alert-box correct';
+          indicator.innerHTML = `<span>🎉 【第 ${currentGroupId} 組】100% 全對過關！</span>`;
+          document.body.className = 'is-correct-theme';
+          triggerConfetti();
+          playSuccessSound();
+          saveSyncState(currentGroupId, currentCharIndex, totalCount, totalCount, true, userMatches, shuffledDefs);
+        } else {
+          indicator.className = 'status-alert-box';
+          indicator.innerHTML = `<span>⚠️ 答對 ${correctCount}/${totalCount} 題，請再討論調整！</span>`;
+          saveSyncState(currentGroupId, currentCharIndex, correctCount, totalCount, false, userMatches, shuffledDefs);
+        }
+      }
+    }
+
+    function updateStatusIndicator() {
+      checkMatchingProgress();
+    }
+
+    function saveSyncState(gId, cIdx, current, total, isCorrect, matches, defs) {
+      const syncKey = `sync_char_${cIdx}`;
+      const syncMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
+
+      const payload = {
+        groupId: gId,
+        char: currentLessonData[cIdx].char,
+        current: current,
+        total: total,
+        isCorrect: isCorrect,
+        userMatches: matches,
+        shuffledDefs: defs,
+        updatedAt: new Date().getTime()
+      };
+
+      syncMap[gId] = payload;
+      localStorage.setItem(syncKey, JSON.stringify(syncMap));
+
+      // Push live update to Cloud Database
+      try {
+        if (firebase.database) {
+          firebase.database().ref(`vocab_rooms/room601/char_${cIdx}/group_${gId}`).set(payload);
+        }
+      } catch(e) {}
+    }
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq, duration) {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playSuccessSound() {
+      playBeep(523.25, 0.15);
+      setTimeout(() => playBeep(659.25, 0.15), 150);
+      setTimeout(() => playBeep(783.99, 0.3), 300);
+    }
+
+    function triggerConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+      for (let i = 0; i < 100; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 16,
+          vy: (Math.random() - 0.8) * 16,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: Math.random() * 8 + 4,
+          life: 100
+        });
+      }
+
+      function renderParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let active = false;
+
+        particles.forEach(p => {
+          if (p.life > 0) {
+            active = true;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.4;
+            p.life--;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+          }
+        });
+
+        if (active) {
+          requestAnimationFrame(renderParticles);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      renderParticles();
+    }
+  </script>
+</body>
+</html>
