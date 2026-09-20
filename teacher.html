@@ -381,10 +381,10 @@
         <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
           <span style="font-weight: 800; color: #a5b4fc;">📚 選擇教學/複習課次：</span>
           <select id="master-lesson-select" onchange="switchActiveLesson(this.value)" style="background: #1e1b4b; color: #fff; border: 2px solid #6366f1; padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 800;">
-            <!-- Dynamic lesson bank options -->
+            <!-- Dynamic lesson options -->
           </select>
 
-          <span style="font-weight: 700; color: var(--accent); margin-left: 12px;">挑戰生字：</span>
+          <span style="font-weight: 700; color: var(--accent);">挑戰生字：</span>
           <select id="review-char-select" onchange="changeReviewCharacter(this.value)" style="background: #0f172a; color: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 700;">
             <!-- Dynamic options -->
           </select>
@@ -435,17 +435,7 @@
     <section id="view-settings" class="view-panel">
       
       <div class="settings-section-card">
-        <h3 class="settings-title">📚 1. 課次庫管理與複習切換 (已儲存課次清單)</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
-          點擊下方課次可「一鍵切換」全班目前練習的課次，方便上新課或課後複習舊課！
-        </p>
-        <div id="lesson-bank-cards-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
-          <!-- Dynamic lesson bank cards -->
-        </div>
-      </div>
-
-      <div class="settings-section-card">
-        <h3 class="settings-title">👥 2. 班級小組數量設定</h3>
+        <h3 class="settings-title">👥 1. 班級小組數量設定</h3>
         <div class="form-group">
           <label class="form-label">請選擇您班級的小組數量：</label>
           <select class="form-select" id="group-count-select" onchange="updateGroupCountSetting(this.value)">
@@ -460,18 +450,57 @@
       </div>
 
       <div class="settings-section-card">
-        <h3 class="settings-title">📝 3. 匯入新課次並存入課次庫</h3>
+        <h3 class="settings-title">📝 2. 下一課生字與語詞釋義快速匯入器</h3>
         <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
-          輸入新課次的「生字」與「語詞：釋義」，點擊「儲存並發布」，該課次將永久存入您的課次庫中，未來隨時可抽出來給學生當複習使用！
+          當您上到下一課時，只需在此輸入「生字」與「語詞：釋義」，點擊「一鍵套用」，學生平板就會自動載入全新的配對遊戲！
         </p>
 
         <div class="form-group">
-          <label class="form-label">新課次名稱：</label>
-          <input type="text" id="lesson-name-input" class="form-select" value="第十四課 語詞配對" placeholder="例如：第七課 草蟲的村落">
+          <label class="form-label">課次名稱：</label>
+          <input type="text" id="lesson-name-input" class="form-select" value="第十二課 語詞配對" placeholder="例如：第七課 草蟲的村落">
         </div>
 
         <div class="form-group">
-          <label class="form-label">生字語詞格式文字貼入區（格式：【生字】下一行 語詞：釋義    const defaultLessonBank = [
+          <label class="form-label">生字語詞格式文字貼入區（格式：【生字】下一行 語詞：釋義）：</label>
+          <textarea class="form-textarea" id="custom-vocab-input" placeholder="格式範例：
+【爽】
+爽快：舒適暢快。
+涼爽：清涼爽快。
+神清氣爽：精神清爽，心情舒暢。
+
+【塵】
+塵埃：飛揚的灰塵。
+微塵：細小的灰塵。
+塵封：被灰塵蓋滿，指長久未用。"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn-action" onclick="applyCustomLesson()">
+            ✨ 一鍵套用全新課次生字
+          </button>
+          <button class="btn-secondary" onclick="loadDefaultLesson1()">
+            🔄 恢復預設（本課 19 個生字清單）
+          </button>
+          <button class="btn-danger" onclick="clearAllSyncData()">
+            🗑️ 清空全班所有歷史作答紀錄
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://chinese-vocab-match-default-rtdb.firebaseio.com"
+    };
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    } catch(e) {}
+    const db = firebase.database ? firebase.database() : null;
+
+    const defaultLessonBank = [
     {
         "id": "lesson_file1",
         "title": "檔案一 筆記課別（舍皆緣蓬...共19字）",
@@ -1523,257 +1552,18 @@
         ]
     }
 ];
+    let lessonBank = [...defaultLessonBank];
+    let currentLessonId = "lesson_file1";
+    let currentLessonData = defaultLessonBank[0].data;
 
-    let lessonBank = [];
-    let currentLessonId = 'lesson_file1';
-    let currentLessonData = [];
-    let totalGroupCount = 7;
-    let currentCharIndex = 0;
-    let masterTimerInterval = null;
 
-    function loadSavedSettings() {
-      const savedGroups = localStorage.getItem('custom_group_count');
-      if (savedGroups) {
-        totalGroupCount = parseInt(savedGroups);
-        const groupEl = document.getElementById('group-count-select');
-        if (groupEl) groupEl.value = totalGroupCount;
-      }
-      loadLessonBank();
-    }
-
-    function loadLessonBank() {
-      lessonBank = [...defaultLessonBank];
-
-      const savedBank = localStorage.getItem('custom_lesson_bank');
-      if (savedBank) {
-        try {
-          const parsed = JSON.parse(savedBank);
-          if (Array.isArray(parsed)) {
-            parsed.forEach(customL => {
-              if (customL && customL.id && customL.isCustom && !lessonBank.some(l => l.id === customL.id)) {
-                lessonBank.push(customL);
-              }
-            });
-          }
-        } catch(e) {}
-      }
-
-      const savedActiveId = localStorage.getItem('active_lesson_id');
-      if (savedActiveId && lessonBank.some(l => l.id === savedActiveId)) {
-        currentLessonId = savedActiveId;
-      } else {
-        currentLessonId = lessonBank[0].id;
-      }
-
-      const activeLesson = lessonBank.find(l => l.id === currentLessonId) || lessonBank[0];
-      currentLessonId = activeLesson.id;
-      currentLessonData = activeLesson.data || [];
-
-      renderLessonSelectOptions();
-      populateReviewSelect();
-    }
-
-    function renderLessonSelectOptions() {
-      const masterSel = document.getElementById('master-lesson-select');
-
-      const optionsHtml = lessonBank.map(l => `
-        <option value="${l.id}" ${l.id === currentLessonId ? 'selected' : ''}>
-          📚 ${l.title} (${l.data.length} 個生字)
-        </option>
-      `).join('');
-
-      if (masterSel) masterSel.innerHTML = optionsHtml;
-      renderLessonBankCards();
-    }
-
-    function renderLessonBankCards() {
-      const container = document.getElementById('lesson-bank-cards-container');
-      if (!container) return;
-
-      container.innerHTML = lessonBank.map(l => {
-        const isActive = l.id === currentLessonId;
-        const charNames = l.data.map(d => d.char).join('、');
-        return `
-          <div style="background: ${isActive ? '#1e1b4b' : 'var(--card-bg)'}; border: 2px solid ${isActive ? '#6366f1' : 'var(--border)'}; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; box-shadow: ${isActive ? '0 4px 16px rgba(99, 102, 241, 0.4)' : 'none'};">
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h4 style="font-size: 17px; font-weight: 800; color: ${isActive ? '#a5b4fc' : '#fff'};">${l.title}</h4>
-                <span style="font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; background: ${isActive ? '#4f46e5' : '#334155'}; color: #fff;">
-                  ${isActive ? '🟢 當前全班練習中' : `${l.data.length} 生字`}
-                </span>
-              </div>
-              <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
-                含生字：【${charNames}】
-              </p>
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              ${!isActive ? `<button class="btn-action" style="padding: 6px 14px; font-size: 13px;" onclick="switchActiveLesson('${l.id}')">▶️ 一鍵切換並複習</button>` : `<span style="font-size: 13px; color: #34d399; font-weight: 700;">✓ 正在進行挑戰</span>`}
-              ${l.isCustom ? `<button class="btn-danger" style="padding: 6px 12px; font-size: 13px;" onclick="deleteCustomLesson('${l.id}')">🗑️ 刪除</button>` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function switchActiveLesson(lessonId) {
-      const lesson = lessonBank.find(l => l.id === lessonId);
-      if (!lesson) return;
-
-      currentLessonId = lesson.id;
-      currentLessonData = lesson.data;
-      currentCharIndex = 0;
-      localStorage.setItem('active_lesson_id', currentLessonId);
-
-      renderLessonSelectOptions();
-      populateReviewSelect();
-      renderSyncReviewGrid(0);
-
-      // Broadcast lesson change to all student tablets
-      broadcastLessonChange(lesson);
-      broadcastResetRound();
-      alert(`🎉 成功切換課次為《${lesson.title}》！全班學生平板已同步更新，可隨時進行練習與複習挑戰！`);
-    }
-
-    function broadcastLessonChange(lesson) {
-      const payloadData = {
-        lessonId: lesson.id,
-        lessonTitle: lesson.title,
-        lessonData: lesson.data,
-        updatedAt: Date.now()
-      };
-
-      const payload = { type: 'lesson_change', data: payloadData };
-
-      if (mqttClient && mqttClient.connected) {
-        mqttClient.publish('chinese_vocab_room601/lesson', JSON.stringify(payload));
-      }
-      if (bcChannel) {
-        bcChannel.postMessage(payload);
-      }
-      if (db) {
-        try {
-          db.ref('vocab_rooms/room601/current_lesson').set(payloadData);
-        } catch(e) {}
-      }
-    }
-
-    function deleteCustomLesson(lessonId) {
-      if (!confirm("確定要刪除這個自訂課次嗎？")) return;
-      lessonBank = lessonBank.filter(l => l.id !== lessonId);
-      localStorage.setItem('custom_lesson_bank', JSON.stringify(lessonBank));
-      if (currentLessonId === lessonId) {
-        switchActiveLesson(lessonBank[0].id);
-      } else {
-        renderLessonSelectOptions();
-      }
-    }
-
-    function loadDefaultLessonBank() {
-      if (confirm("確定要將課次庫恢復為預設的 3 大單元課次嗎？（自訂新增的課次將重置）")) {
-        lessonBank = [...defaultLessonBank];
-        localStorage.removeItem('custom_lesson_bank');
-        switchActiveLesson(lessonBank[0].id);
-      }
-    }
-
-    function switchView(viewName) {
-      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
-
-      if (viewName === 'review') {
-        document.querySelectorAll('.nav-btn')[0].classList.add('active');
-        document.getElementById('view-review').classList.add('active');
-        renderSyncReviewGrid(currentCharIndex);
-      } else if (viewName === 'settings') {
-        document.querySelectorAll('.nav-btn')[1].classList.add('active');
-        document.getElementById('view-settings').classList.add('active');
-      }
-    }
-
-    function updateGroupCountSetting(val) {
-      totalGroupCount = parseInt(val);
-      localStorage.setItem('custom_group_count', totalGroupCount);
-      renderPresenceBar();
-      renderSyncReviewGrid(currentCharIndex);
-    }
-
-    function populateReviewSelect() {
-      const sel = document.getElementById('review-char-select');
-      if (sel) {
-        sel.innerHTML = currentLessonData.map((d, idx) => `<option value="${idx}">【${d.char}】字生字配對</option>`).join('');
-      }
-    }
-
-    function changeReviewCharacter(cIdx) {
-      currentCharIndex = parseInt(cIdx);
-      listenToCloudUpdates(currentCharIndex);
-      renderSyncReviewGrid(currentCharIndex);
-    })", def: "佛寺中傍晚擊鼓，早晨敲鐘。比喻使人覺悟的言論。" }
-        ]
-      },
-      {
-        char: "肩",
-        items: [
-          { word: "肩膀", def: "脖子兩旁與手臂相連的部分。" },
-          { word: "肩負", def: "擔負、承受重任，如「肩負重任」。" },
-          { word: "比肩", def: "並肩而行。比喻地位相等或關係密切。" },
-          { word: "肩章", def: "佩戴在軍人、警察等制服肩膀上的徽章。" },
-          { word: "擦肩而過", def: "形容距離極近地掠過或錯過。" },
-          { word: "比肩繼踵(成語)", def: "肩並肩，腳尖碰腳跟。形容人很多，非常擁擁擠。" }
-        ]
-      },
-      {
-        char: "絨",
-        items: [
-          { word: "絨毛", def: "細小而柔軟的短毛。" },
-          { word: "羽絨", def: "羽毛根部的細軟絨毛，常用來填充防寒衣物。" },
-          { word: "絨線", def: "編織衣物用的毛線，或指帶絨的絲線。" },
-          { word: "天鵝絨", def: "一種質地柔軟、富有光澤的絲織品。" },
-          { word: "絨毛玩具", def: "外面是布料或絨面，內部填充棉花等軟物的玩具。" },
-          { word: "細軟如絨(成語)", def: "形容物體質地非常細緻、柔軟，就像絲絨一樣。" }
-        ]
-      },
-      {
-        char: "咂",
-        items: [
-          { word: "咂嘴", def: "用舌頭抵住上顎發出聲音，表示驚奇、讚嘆或惋惜。" },
-          { word: "咂摸", def: "仔細品嚐，引申為用心琢磨、細細體會。" },
-          { word: "咂酒", def: "指吸吮、品嚐美酒。" },
-          { word: "咂嘴弄舌", def: "形容吃得津津有味，或指說話囉唆、搬弄是非。" },
-          { word: "咂一嘴", def: "品嚐一下、吸吮一口。" },
-          { word: "咂嘴咂舌(成語)", def: "形容吃得津津有味，或對某事表示驚嘆、羨慕或可惜的樣子。" }
-        ]
-      },
-      {
-        char: "瀉",
-        items: [
-          { word: "傾瀉", def: "液體從高處急速流下，如「瀑布傾瀉而下」。" },
-          { word: "瀉藥", def: "能促進排便的藥物。" },
-          { word: "腹瀉", def: "拉肚子，指排便次數增多且糞便稀薄。" },
-          { word: "流瀉", def: "月光、水流等流淌、流布的樣子，如「月光流瀉而下」。" },
-          { word: "上吐下瀉", def: "又吐又拉，指嚴重的腸胃病症狀。" },
-          { word: "一瀉千里(成語)", def: "形容水流速度極快，向下奔流。也比喻文章氣勢奔放，或局勢急劇下滑。" }
-        ]
-      },
-      {
-        char: "賴",
-        items: [
-          { word: "依賴", def: "依靠他人或事物而不能獨立。" },
-          { word: "耍賴", def: "不承認自己的言行或錯誤，企圖逃避責任。" },
-          { word: "賴帳", def: "不承認欠下的債務。" },
-          { word: "賴以為生", def: "依靠某種方式來維持生命或生活。" },
-          { word: "誣賴", def: "無中生有地陷害、指責他人。" },
-          { word: "百無聊賴(成語)", def: "形容非常無聊，或者生活寂寞潦倒而無所寄託。" }
-        ]
-      }
-    ];
-
-    let currentLessonData = [];
+    
     let totalGroupCount = 7;
     let currentCharIndex = 0;
     let masterTimerInterval = null;
 
     document.addEventListener('DOMContentLoaded', () => {
+      loadSavedSettings();
       loadSavedSettings();
       populateReviewSelect();
       listenToPresence();
@@ -1814,6 +1604,82 @@
       renderSyncReviewGrid(currentCharIndex);
     }
 
+    
+    function loadSavedSettings() {
+      loadLessonBank();
+    }
+
+    function loadLessonBank() {
+      lessonBank = [...defaultLessonBank];
+
+      const savedActiveId = localStorage.getItem('active_lesson_id');
+      if (savedActiveId && lessonBank.some(l => l.id === savedActiveId)) {
+        currentLessonId = savedActiveId;
+      } else {
+        currentLessonId = lessonBank[0].id;
+      }
+
+      const activeLesson = lessonBank.find(l => l.id === currentLessonId) || lessonBank[0];
+      currentLessonId = activeLesson.id;
+      currentLessonData = activeLesson.data || [];
+
+      renderLessonSelectOptions();
+      populateReviewSelect();
+    }
+
+    function renderLessonSelectOptions() {
+      const masterSel = document.getElementById('master-lesson-select');
+      if (!masterSel) return;
+
+      const optionsHtml = lessonBank.map(l => `
+        <option value="${l.id}" ${l.id === currentLessonId ? 'selected' : ''}>
+          📚 ${l.title} (${l.data.length} 個生字)
+        </option>
+      `).join('');
+
+      masterSel.innerHTML = optionsHtml;
+    }
+
+    function switchActiveLesson(lessonId) {
+      const lesson = lessonBank.find(l => l.id === lessonId);
+      if (!lesson) return;
+
+      currentLessonId = lesson.id;
+      currentLessonData = lesson.data;
+      currentCharIndex = 0;
+      localStorage.setItem('active_lesson_id', currentLessonId);
+
+      renderLessonSelectOptions();
+      populateReviewSelect();
+      renderSyncReviewGrid(0);
+
+      broadcastLessonChange(lesson);
+      broadcastResetRound();
+    }
+
+    function broadcastLessonChange(lesson) {
+      const payloadData = {
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        lessonData: lesson.data,
+        updatedAt: Date.now()
+      };
+
+      const payload = { type: 'lesson_change', data: payloadData };
+
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish('chinese_vocab_room601/lesson', JSON.stringify(payload));
+      }
+      if (bcChannel) {
+        bcChannel.postMessage(payload);
+      }
+      if (db) {
+        try {
+          db.ref('vocab_rooms/room601/current_lesson').set(payloadData);
+        } catch(e) {}
+      }
+    }
+
     function populateReviewSelect() {
       const sel = document.getElementById('review-char-select');
       sel.innerHTML = currentLessonData.map((d, idx) => `<option value="${idx}">【${d.char}】字生字配對</option>`).join('');
@@ -1830,6 +1696,7 @@
     let activePresence = {};
 
     document.addEventListener('DOMContentLoaded', () => {
+      loadSavedSettings();
       loadSavedSettings();
       populateReviewSelect();
       initTeacherSyncEngine();
@@ -2241,7 +2108,7 @@
     }
 
     function loadDefaultLesson1() {
-      if(defaultLessonBank && defaultLessonBank.length > 0) switchActiveLesson(defaultLessonBank[0].id);
+      currentLessonData = [...defaultLessonBank[0].data];
       localStorage.removeItem('custom_lesson_data');
 
       populateReviewSelect();
