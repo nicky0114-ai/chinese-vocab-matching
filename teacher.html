@@ -1689,6 +1689,28 @@
       currentCharIndex = parseInt(cIdx);
       listenToCloudUpdates(currentCharIndex);
       renderSyncReviewGrid(currentCharIndex);
+      broadcastCharacterChange(currentCharIndex);
+    }
+
+    function broadcastCharacterChange(cIdx) {
+      const payloadData = {
+        targetCharIndex: cIdx,
+        lessonId: currentLessonId,
+        updatedAt: Date.now()
+      };
+      const payload = { type: 'character_change', data: payloadData };
+
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish('chinese_vocab_room601/character', JSON.stringify(payload));
+      }
+      if (bcChannel) {
+        bcChannel.postMessage(payload);
+      }
+      if (db) {
+        try {
+          db.ref('vocab_rooms/room601/current_character').set(payloadData);
+        } catch(e) {}
+      }
     }
 
     let mqttClient = null;
@@ -1799,6 +1821,9 @@
 
       const payloadData = {
         state: state,
+        lessonId: currentLessonId,
+        lessonTitle: lessonBank.find(l => l.id === currentLessonId)?.title || '',
+        lessonData: currentLessonData,
         targetCharIndex: currentCharIndex,
         timerSeconds: timerSecs,
         startTime: startTime
