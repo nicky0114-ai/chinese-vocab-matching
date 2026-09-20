@@ -454,7 +454,13 @@
     <p class="entry-subtitle">📍 請先點選您的小組編號進入房間：</p>
     
     <div class="entry-grid" id="entry-grid-container">
-      <!-- Generated group cards -->
+      <div class="entry-group-card" onclick="selectInitialGroup(1)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 1 組</span></div>
+      <div class="entry-group-card" onclick="selectInitialGroup(2)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 2 組</span></div>
+      <div class="entry-group-card" onclick="selectInitialGroup(3)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 3 組</span></div>
+      <div class="entry-group-card" onclick="selectInitialGroup(4)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 4 組</span></div>
+      <div class="entry-group-card" onclick="selectInitialGroup(5)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 5 組</span></div>
+      <div class="entry-group-card" onclick="selectInitialGroup(6)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 6 組</span></div>
+      <div class="entry-group-card" onclick="selectInitialGroup(7)"><span class="entry-group-icon">👥</span><span class="entry-group-name">第 7 組</span></div>
     </div>
   </div>
 
@@ -1743,7 +1749,12 @@
 
     function loadSavedSettings() {
       const savedGroups = localStorage.getItem('custom_group_count');
-      if (savedGroups) totalGroupCount = parseInt(savedGroups);
+      if (savedGroups) {
+        const parsed = parseInt(savedGroups);
+        totalGroupCount = (!isNaN(parsed) && parsed > 0) ? parsed : 7;
+      } else {
+        totalGroupCount = 7;
+      }
 
       const savedLessonData = localStorage.getItem('custom_lesson_data');
       if (savedLessonData) {
@@ -1756,8 +1767,10 @@
 
     function renderEntryGroupCards() {
       const container = document.getElementById('entry-grid-container');
+      if (!container) return;
+      const count = (typeof totalGroupCount === 'number' && !isNaN(totalGroupCount) && totalGroupCount > 0) ? totalGroupCount : 7;
       let html = '';
-      for (let g = 1; g <= totalGroupCount; g++) {
+      for (let g = 1; g <= count; g++) {
         html += `
           <div class="entry-group-card" onclick="selectInitialGroup(${g})">
             <span class="entry-group-icon">👥</span>
