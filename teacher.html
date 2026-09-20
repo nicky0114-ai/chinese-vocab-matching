@@ -1542,11 +1542,20 @@
     }
 
     function loadLessonBank() {
+      lessonBank = [...defaultLessonBank];
+
       const savedBank = localStorage.getItem('custom_lesson_bank');
       if (savedBank) {
-        try { lessonBank = JSON.parse(savedBank); } catch(e) { lessonBank = [...defaultLessonBank]; }
-      } else {
-        lessonBank = [...defaultLessonBank];
+        try {
+          const parsed = JSON.parse(savedBank);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(customL => {
+              if (customL && customL.id && customL.isCustom && !lessonBank.some(l => l.id === customL.id)) {
+                lessonBank.push(customL);
+              }
+            });
+          }
+        } catch(e) {}
       }
 
       const savedActiveId = localStorage.getItem('active_lesson_id');
@@ -1557,8 +1566,11 @@
       }
 
       const activeLesson = lessonBank.find(l => l.id === currentLessonId) || lessonBank[0];
-      currentLessonData = activeLesson.data;
+      currentLessonId = activeLesson.id;
+      currentLessonData = activeLesson.data || [];
+
       renderLessonSelectOptions();
+      populateReviewSelect();
     }
 
     function renderLessonSelectOptions() {
@@ -1756,7 +1768,7 @@
       }
     ];
 
-    let currentLessonData = [...defaultLessonData];
+    let currentLessonData = [];
     let totalGroupCount = 7;
     let currentCharIndex = 0;
     let masterTimerInterval = null;
@@ -2229,7 +2241,7 @@
     }
 
     function loadDefaultLesson1() {
-      currentLessonData = [...defaultLessonData];
+      if(defaultLessonBank && defaultLessonBank.length > 0) switchActiveLesson(defaultLessonBank[0].id);
       localStorage.removeItem('custom_lesson_data');
 
       populateReviewSelect();
