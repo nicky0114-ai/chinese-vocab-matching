@@ -113,6 +113,12 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    .entry-group-card:active {
+      transform: scale(0.95);
+      background: #4c1d95 !important;
+      border-color: #818cf8 !important;
+    }
+
     .entry-group-card:hover {
       border-color: var(--accent);
       transform: scale(1.05);
@@ -454,6 +460,31 @@
   <canvas id="confetti-canvas"></canvas>
 
   <!-- INITIAL GROUP SELECTION MODAL ON ENTRY -->
+  <script>
+    function selectInitialGroup(gId) {
+      if (window._lastGroupSelectTime && (Date.now() - window._lastGroupSelectTime < 300)) return;
+      window._lastGroupSelectTime = Date.now();
+
+      try {
+        window.currentGroupId = parseInt(gId);
+        try { localStorage.setItem('selected_group_id', window.currentGroupId); } catch(e) {}
+
+        const modal = document.getElementById('entry-group-modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }
+
+        if (typeof renderGroupPills === 'function') renderGroupPills();
+        if (typeof loadGroupMatching === 'function') loadGroupMatching(window.currentCharIndex || 0);
+        if (typeof reportPresenceToCloud === 'function') reportPresenceToCloud();
+        if (typeof startPresenceHeartbeat === 'function') startPresenceHeartbeat();
+      } catch(err) {
+        console.error('selectInitialGroup error:', err);
+      }
+    }
+  </script>
+
   <div class="entry-group-modal" id="entry-group-modal">
     <div class="brand-icon" style="font-size: 54px; margin-bottom: 12px;">📱</div>
     <h2 class="entry-title">歡迎來到國語生字配對！</h2>
