@@ -1688,6 +1688,7 @@
             if (statusEl) statusEl.textContent = '🟢 雲端同步已連線：等待老師下達指令';
             mqttClient.subscribe('chinese_vocab_room601/#');
             reportPresenceToCloud();
+            startPresenceHeartbeat();
           });
 
           mqttClient.on('message', (topic, message) => {

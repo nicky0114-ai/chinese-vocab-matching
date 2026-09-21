@@ -1774,7 +1774,7 @@
         const now = Date.now();
         let changed = false;
         for (let g in activePresence) {
-          if (activePresence[g] && activePresence[g].lastSeen && (now - activePresence[g].lastSeen > 12000)) {
+          if (activePresence[g] && activePresence[g].lastSeen && (now - activePresence[g].lastSeen > 30000)) {
             delete activePresence[g];
             changed = true;
           }
@@ -1916,7 +1916,7 @@
       const now = Date.now();
       for (let g = 1; g <= totalGroupCount; g++) {
         const info = activePresence[g];
-        const isOnline = !!(info && (now - info.lastSeen < 15000));
+        const isOnline = !!(info && (now - info.lastSeen < 35000));
         html += `<span class="presence-badge ${isOnline ? 'online' : ''}" style="padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; background: ${isOnline ? '#059669' : '#334155'}; color: ${isOnline ? '#fff' : '#94a3b8'};">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
       }
       container.innerHTML = html;
