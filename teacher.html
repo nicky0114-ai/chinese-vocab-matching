@@ -1910,12 +1910,14 @@
     }
 
     function renderPresenceBar() {
-      const container = document.getElementById('presence-bar-container');
+      const container = document.getElementById('presence-badges-container') || document.getElementById('presence-bar-container');
       if (!container) return;
-      let html = '<span style="font-size: 13px; color: #c7d2fe; font-weight: 700;">各組連線狀態：</span>';
+      let html = '';
+      const now = Date.now();
       for (let g = 1; g <= totalGroupCount; g++) {
-        const isOnline = !!activePresence[g];
-        html += `<span class="presence-badge ${isOnline ? 'online' : ''}">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
+        const info = activePresence[g];
+        const isOnline = !!(info && (now - info.lastSeen < 15000));
+        html += `<span class="presence-badge ${isOnline ? 'online' : ''}" style="padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; background: ${isOnline ? '#059669' : '#334155'}; color: ${isOnline ? '#fff' : '#94a3b8'};">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
       }
       container.innerHTML = html;
     }
