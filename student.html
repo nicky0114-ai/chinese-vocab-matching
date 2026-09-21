@@ -69,7 +69,7 @@
     }
 
     .entry-group-modal.hidden {
-      display: none;
+      display: none !important;
     }
 
     .entry-title {
@@ -1786,13 +1786,23 @@
     }
 
     function selectInitialGroup(gId) {
-      currentGroupId = gId;
-      localStorage.setItem('selected_group_id', gId);
-      document.getElementById('entry-group-modal').classList.add('hidden');
-      renderGroupPills();
-      loadGroupMatching(currentCharIndex);
-      reportPresenceToCloud();
-      startPresenceHeartbeat();
+      try {
+        currentGroupId = gId;
+        localStorage.setItem('selected_group_id', gId);
+
+        const modal = document.getElementById('entry-group-modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }
+
+        renderGroupPills();
+        loadGroupMatching(currentCharIndex || 0);
+        reportPresenceToCloud();
+        startPresenceHeartbeat();
+      } catch(err) {
+        console.error("selectInitialGroup error:", err);
+      }
     }
 
     function renderGroupPills() {
@@ -1888,13 +1898,27 @@
     }
 
     function loadGroupMatching(index) {
-      if (index >= currentLessonData.length) index = 0;
+      if (!currentLessonData || !Array.isArray(currentLessonData) || currentLessonData.length === 0) {
+        if (typeof defaultLessonBank !== 'undefined' && defaultLessonBank[0] && defaultLessonBank[0].data) {
+          currentLessonData = defaultLessonBank[0].data;
+        } else {
+          return;
+        }
+      }
+
+      if (index < 0 || index >= currentLessonData.length) index = 0;
       currentCharIndex = index;
-      renderCharPills();
 
       const groupData = currentLessonData[index];
-      document.getElementById('current-char-badge').textContent = groupData.char;
-      document.getElementById('current-group-title').textContent = `【第 ${currentGroupId || 1} 組】生字【${groupData.char}】配對任務`;
+      if (!groupData) return;
+
+      renderCharPills();
+
+      const charBadge = document.getElementById('current-char-badge');
+      if (charBadge) charBadge.textContent = groupData.char;
+
+      const groupTitle = document.getElementById('current-group-title');
+      if (groupTitle) groupTitle.textContent = `【第 ${currentGroupId || 1} 組】生字【${groupData.char}】配對任務`;
 
       selectedWordCard = null;
       userMatches = {};
