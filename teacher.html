@@ -122,6 +122,7 @@
       display: block;
     }
 
+    /* Teacher Master Broadcast Panel */
     .master-broadcast-card {
       background: linear-gradient(135deg, #1e1b4b, #312e81);
       border: 2px solid #6366f1;
@@ -151,24 +152,24 @@
       padding: 10px 16px;
       border-radius: 12px;
       border: 1px solid rgba(99, 102, 241, 0.3);
-      width: 100%;
     }
 
     .presence-badge {
+      background: #334155;
+      color: #94a3b8;
       padding: 4px 10px;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 700;
-      background: #334155;
-      color: #94a3b8;
     }
 
     .presence-badge.online {
-      background: #059669 !important;
-      color: #fff !important;
+      background: #059669;
+      color: #fff;
       box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
     }
 
+    /* Review Dashboard Grid */
     .groups-review-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -234,6 +235,7 @@
       background: rgba(239, 68, 68, 0.15);
     }
 
+    /* Settings View Cards & Form */
     .settings-section-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -296,25 +298,35 @@
       box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
     }
 
+    .btn-action {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
     .btn-danger {
       background: linear-gradient(135deg, #ef4444, #dc2626);
       color: white;
       border: none;
-      padding: 14px 24px;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 800;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
       cursor: pointer;
     }
 
     .btn-secondary {
       background: #334155;
-      color: white;
+      color: #fff;
       border: none;
-      padding: 14px 24px;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 800;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 700;
       cursor: pointer;
     }
   </style>
@@ -323,17 +335,20 @@
 
   <header class="app-header">
     <div class="brand">
-      <span class="brand-icon">🎓</span>
+      <span class="brand-icon">🖥️</span>
       <div>
         <h1 class="brand-title">生字語詞限時闖關 - 教師主控與檢討大螢幕</h1>
       </div>
     </div>
+    <div style="font-size: 14px; color: #34d399; font-weight: 700;" id="teacher-cloud-status">
+      🟢 雲端跨裝置即時連線中
+    </div>
 
     <nav class="nav-tabs">
-      <button class="nav-btn active" id="tab-btn-review" onclick="switchView('review')">
-        📊 全班作答對比與檢討
+      <button class="nav-btn active" onclick="switchView('review')">
+        ⚔️ 同字各組對比與課堂檢討
       </button>
-      <button class="nav-btn" id="tab-btn-settings" onclick="switchView('settings')">
+      <button class="nav-btn" onclick="switchView('settings')">
         ⚙️ 組別與下一課生字設定
       </button>
     </nav>
@@ -364,11 +379,6 @@
 
       <div class="master-control-row" style="border-top: 1px solid rgba(99, 102, 241, 0.3); padding-top: 16px;">
         <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-          <span style="font-weight: 800; color: #a5b4fc;">📚 選擇教學/複習課次：</span>
-          <select id="master-lesson-select" onchange="switchActiveLesson(this.value)" style="background: #1e1b4b; color: #fff; border: 2px solid #6366f1; padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 800;">
-            <!-- Dynamic lesson options -->
-          </select>
-
           <span style="font-weight: 700; color: var(--accent);">挑戰生字：</span>
           <select id="review-char-select" onchange="changeReviewCharacter(this.value)" style="background: #0f172a; color: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 10px; font-size: 16px; font-weight: 700;">
             <!-- Dynamic options -->
@@ -435,34 +445,39 @@
       </div>
 
       <div class="settings-section-card">
-        <h3 class="settings-title">📝 2. 快速貼入下一課生字與釋義</h3>
-        <p style="color: var(--text-muted); margin-bottom: 16px;">格式說明：每一字開頭為【生字】，換行後貼上「語詞：釋義」</p>
-        
+        <h3 class="settings-title">📝 2. 下一課生字與語詞釋義快速匯入器</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+          當您上到下一課時，只需在此輸入「生字」與「語詞：釋義」，點擊「一鍵套用」，學生平板就會自動載入全新的配對遊戲！
+        </p>
+
         <div class="form-group">
-          <label class="form-label">課程名稱/課次：</label>
-          <input type="text" id="lesson-name-input" class="form-select" placeholder="例如：第五課 題西林壁與遊山西村">
+          <label class="form-label">課次名稱：</label>
+          <input type="text" id="lesson-name-input" class="form-select" value="第十二課 語詞配對" placeholder="例如：第七課 草蟲的村落">
         </div>
 
         <div class="form-group">
-          <label class="form-label">生字與語詞釋義文本：</label>
-          <textarea id="custom-vocab-input" class="form-textarea" placeholder="【緣】
-緣分：人與人之間建立良好關係的偶然機會。
-緣由：原由、原因。
+          <label class="form-label">生字語詞格式文字貼入區（格式：【生字】下一行 語詞：釋義）：</label>
+          <textarea class="form-textarea" id="custom-vocab-input" placeholder="格式範例：
+【爽】
+爽快：舒適暢快。
+涼爽：清涼爽快。
+神清氣爽：精神清爽，心情舒暢。
 
-【蓬】
-蓬勃：繁榮、旺盛的樣子。
-蓬鬆：形容頭髮或毛髮鬆散柔軟。"></textarea>
+【塵】
+塵埃：飛揚的灰塵。
+微塵：細小的灰塵。
+塵封：被灰塵蓋滿，指長久未用。"></textarea>
         </div>
 
-        <div style="display: flex; gap: 12px;">
-          <button class="btn-start" onclick="applyCustomLesson()">
-            💾 儲存並發布此課生字
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn-action" onclick="applyCustomLesson()">
+            ✨ 一鍵套用全新課次生字
           </button>
           <button class="btn-secondary" onclick="loadDefaultLesson1()">
-            🔄 恢復為預設第一課
+            🔄 恢復預設（本課 19 個生字清單）
           </button>
           <button class="btn-danger" onclick="clearAllSyncData()">
-            🗑️ 清空全班歷史作答紀錄
+            🗑️ 清空全班所有歷史作答紀錄
           </button>
         </div>
       </div>
@@ -480,125 +495,270 @@
     } catch(e) {}
     const db = firebase.database ? firebase.database() : null;
 
-    const defaultLessonBank = [
-    {
-        "id": "lesson_file1",
-        "title": "檔案一 筆記課別（舍皆緣蓬...共19字）",
-        "data": [
-            {
-                "char": "舍",
-                "items": [
-                    { "word": "宿舍", "def": "供人員居住的房屋。" },
-                    { "word": "房舍", "def": "房屋。" },
-                    { "word": "寒舍", "def": "對人謙稱自己的家。" },
-                    { "word": "舍弟", "def": "對人謙稱自己的弟弟。" },
-                    { "word": "舍棄", "def": "拋棄、放棄。" },
-                    { "word": "退避三舍(成語)", "def": "比喻主動讓步，主動迴避或妥協，避免發生衝突。" }
-                ]
-            },
-            {
-                "char": "皆",
-                "items": [
-                    { "word": "皆可", "def": "全部都可以。" },
-                    { "word": "人皆有之", "def": "所有人都有這種特質或情感。" },
-                    { "word": "眾所皆知", "def": "大家都知道。" },
-                    { "word": "比比皆是", "def": "屢屢可見，極多。" },
-                    { "word": "皆大歡喜(成語)", "def": "大家都高興滿意。" }
-                ]
-            },
-            {
-                "char": "緣",
-                "items": [
-                    { "word": "緣分", "def": "人與人之間建立良好關係的偶然機會或命定聯繫。" },
-                    { "word": "緣由", "def": "原由、原因。" },
-                    { "word": "無緣", "def": "沒有機會或緣分。" },
-                    { "word": "邊緣", "def": "事物最外側的部分，或比喻臨界狀態。" },
-                    { "word": "機緣", "def": "好的機會與緣分。" },
-                    { "word": "緣木求魚(成語)", "def": "爬上樹去抓魚。比喻方向或方法不對，不可能達到目的。" }
-                ]
-            },
-            {
-                "char": "蓬",
-                "items": [
-                    { "word": "蓬勃", "def": "繁榮、旺盛的樣子，如「蓬勃發展」。" },
-                    { "word": "蓬鬆", "def": "形容頭髮或毛髮鬆散柔軟。" },
-                    { "word": "蓬門", "def": "用柴草做成的門，比喻簡陋的房屋。" },
-                    { "word": "蓬萊", "def": "傳說中的海上仙山。" },
-                    { "word": "蓬頭", "def": "頭髮散亂的樣子。" },
-                    { "word": "朝氣蓬勃(成語)", "def": "形容精神振作，充滿生機與活力。" }
-                ]
-            },
-            {
-                "char": "飧",
-                "items": [
-                    { "word": "盤飧", "def": "盤中的飯菜食物。" },
-                    { "word": "飧飯", "def": "熟飯菜。" },
-                    { "word": "夕飧", "def": "晚飯。" },
-                    { "word": "野飧", "def": "在郊野享用飯菜。" },
-                    { "word": "聚飧", "def": "聚在一起用餐。" },
-                    { "word": "饔飧不繼(成語)", "def": "饔，早餐；飧，晚餐。早餐和晚餐都無法按時接續。形容生活極其貧困，三餐不繼。" }
-                ]
-            }
+    const defaultLessonData = [
+      {
+        char: "裁",
+        items: [
+          { word: "裁縫", def: "裁剪並縫製衣服，或指從事這種工作的人。" },
+          { word: "裁員", def: "因業務縮減而減少工作人員。" },
+          { word: "裁判", def: "體育比賽中負責評判勝負的執法人員，也比喻評判是非的人。" },
+          { word: "體裁", def: "詩歌、散文、小說等文章的寫作樣式或結構。" },
+          { word: "獨裁", def: "獨自掌握政治權力，實行專制統治。" },
+          { word: "獨出心裁(成語)", def: "比喻構思獨特，與眾不同。" }
         ]
-    },
-    {
-        "id": "lesson_file2",
-        "title": "檔案二 筆記課別（裁茂藤蔓...共19字）",
-        "data": [
-            {
-                "char": "裁",
-                "items": [
-                    { "word": "裁縫", "def": "裁剪並縫製衣服，或指從事這種工作的人。" },
-                    { "word": "裁員", "def": "因業務縮減而減少工作人員。" },
-                    { "word": "裁判", "def": "體育比賽中負責評判勝負的執法人員，也比喻評判是非的人。" },
-                    { "word": "體裁", "def": "詩歌、散文、小說等文章的寫作樣式或結構。" },
-                    { "word": "獨裁", "def": "獨自掌握政治權力，實行專制統治。" },
-                    { "word": "獨出心裁(成語)", "def": "比喻構思獨特，與眾不同。" }
-                ]
-            },
-            {
-                "char": "茂",
-                "items": [
-                    { "word": "茂密", "def": "草木繁多而茂盛。" },
-                    { "word": "茂盛", "def": "植物生長繁茂。" },
-                    { "word": "豐茂", "def": "形容土地肥沃，草木生長旺盛。" },
-                    { "word": "根深葉茂", "def": "植物根基深、枝葉茂密。比喻基礎穩固而發展興旺。" },
-                    { "word": "聲情並茂", "def": "形容演唱、朗誦或演說時的聲音和感情都非常生動感人。" },
-                    { "word": "圖文並茂(成語)", "def": "書籍、報告或海報中，圖畫與文字都非常豐富精采。" }
-                ]
-            },
-            {
-                "char": "藤",
-                "items": [
-                    { "word": "藤蔓", "def": "藤本植物攀爬蔓延的細莖。" },
-                    { "word": "藤椅", "def": "用藤條編織成的椅子，通風涼快。" },
-                    { "word": "紫藤", "def": "一種美麗的蔓生攀緣灌木，春季開紫藍色花。" },
-                    { "word": "蔓藤", "def": "植物細長且攀附他物的莖。" },
-                    { "word": "葛藤", "def": "一種蔓生植物，在文學中常比喻事情糾纏不清或人際關係複雜。" },
-                    { "word": "順藤摸瓜(成語)", "def": "沿著藤蔓去尋找西瓜。比喻沿著線索追根究底，查明事實真相。" }
-                ]
-            },
-            {
-                "char": "蔓",
-                "items": [
-                    { "word": "蔓延", "def": "像蔓草般向四周延展滋生，比喻事物擴散開來。" },
-                    { "word": "蔓生", "def": "藤蔓植物攀附他物成長的特性。" },
-                    { "word": "枝蔓", "def": "比喻文章或說話中多餘且糾纏不清的分支細節。" },
-                    { "word": "蔓草", "def": "蔓延滋生的草，常比喻繁雜或荒蕪的景象。" },
-                    { "word": "蔓藤", "def": "細長而能纏繞他物的植物莖。" },
-                    { "word": "蔓草荒煙(成語)", "def": "形容荒涼冷落的景象。" }
-                ]
-            }
+      },
+      {
+        char: "茂",
+        items: [
+          { word: "茂密", def: "草木繁多而茂盛。" },
+          { word: "茂盛", def: "植物生長繁茂。" },
+          { word: "豐茂", def: "形容土地肥沃，草木生長旺盛。" },
+          { word: "根深葉茂", def: "植物根基深、枝葉茂密。比喻基礎穩固而發展興旺。" },
+          { word: "聲情並茂", def: "形容演唱、朗誦或演說時的聲音和感情都非常生動感人。" },
+          { word: "圖文並茂(成語)", def: "書籍、報告或海報中，圖畫與文字都非常豐富精采。" }
         ]
-    }
-];
+      },
+      {
+        char: "藤",
+        items: [
+          { word: "藤蔓", def: "藤本植物攀爬蔓延的細莖。" },
+          { word: "藤椅", def: "用藤條編織成的椅子，通風涼快。" },
+          { word: "紫藤", def: "一種美麗的蔓生攀緣灌木，春季開紫藍色花。" },
+          { word: "蔓藤", def: "植物細長且攀附他物的莖。" },
+          { word: "葛藤", def: "一種蔓生植物，在文學中常比喻事情糾纏不清或人際關係複雜。" },
+          { word: "順藤摸瓜(成語)", def: "沿著藤蔓去尋找西瓜。比喻沿著線索追根究底，查明事實真相。" }
+        ]
+      },
+      {
+        char: "蔓",
+        items: [
+          { word: "蔓延", def: "像蔓草般向四周延展滋生，比喻事物擴散開來。" },
+          { word: "蔓生", def: "藤蔓植物攀附他物成長的特性。" },
+          { word: "枝蔓", def: "比喻文章或說話中多餘且糾纏不清的分支細節。" },
+          { word: "蔓草", def: "蔓延滋生的草，常比喻繁雜或荒蕪的景象。" },
+          { word: "蔓藤", def: "細長而能纏繞他物的植物莖。" },
+          { word: "蔓草荒煙(成語)", def: "形容荒涼冷落的景象。" }
+        ]
+      },
+      {
+        char: "掀",
+        items: [
+          { word: "掀開", def: "揭開覆蓋在上面的東西。" },
+          { word: "掀起", def: "揭開，或比喻激起浪潮、風波。" },
+          { word: "掀動", def: "翻動、抖動，如風掀動窗簾。" },
+          { word: "掀天", def: "形容氣勢極大，能震動天地。" },
+          { word: "掀騰", def: "掀動、喧鬧或翻騰。" },
+          { word: "掀天揭地(成語)", def: "形容聲勢極其浩大，或做出的事業非常偉大。" }
+        ]
+      },
+      {
+        char: "悉",
+        items: [
+          { word: "悉心", def: "盡心、全心全意。" },
+          { word: "熟悉", def: "非常了解、知道得很清楚。" },
+          { word: "獲悉", def: "得到消息或知曉某事。" },
+          { word: "悉數", def: "全部的數量，或將所有東西列舉出來。" },
+          { word: "洞悉", def: "清楚而透徹地明白、看穿。" },
+          { word: "悉心照料(成語)", def: "盡心盡力、無微不至地照顧。" }
+        ]
+      },
+      {
+        char: "添",
+        items: [
+          { word: "添加", def: "增加進去。" },
+          { word: "添油加醋", def: "比喻說話時為了增添渲染效果，在內容中加入誇張或虛構的成分。" },
+          { word: "增添", def: "加多、增益，如「增添色彩」。" },
+          { word: "添置", def: "增加購買、備置。" },
+          { word: "錦上添花(成語)", def: "比喻好上加好，使原本就美好的事物更加完美。" }
+        ]
+      },
+      {
+        char: "免",
+        items: [
+          { word: "避免", def: "防止、設法使不發生。" },
+          { word: "免稅", def: "免除應繳納的稅金。" },
+          { word: "免除", def: "省去、撤除，如「免除職務」。" },
+          { word: "免費", def: "不收取費用。" },
+          { word: "難免", def: "不容易避免，多用於形容必然會發生的某種不理想情況。" },
+          { word: "在所難免(成語)", def: "無論如何很難免除、避免。" }
+        ]
+      },
+      {
+        char: "隙",
+        items: [
+          { word: "縫隙", def: "狹窄的空隙或裂紋。" },
+          { word: "空隙", def: "閒置的空間或時間，也指事情的漏洞。" },
+          { word: "嫌隙", def: "因猜疑、誤會而產生的意見不合與怨恨。" },
+          { word: "隙地", def: "空地、未被利用的土地。" },
+          { word: "白駒過隙(成語)", def: "比喻時間流逝極快。" }
+        ]
+      },
+      {
+        char: "尚",
+        items: [
+          { word: "崇尚", def: "尊崇、嚮往並注重。" },
+          { word: "時尚", def: "當前流行的風氣或風格。" },
+          { word: "尚且", def: "副詞，表示進一步的論述，連...都...（通常與何況呼應）。" },
+          { word: "尚可", def: "還算可以、合格。" },
+          { word: "高尚", def: "道德品質清高、尊貴。" },
+          { word: "禮尚往來(成語)", def: "禮節上注重有來有往。指人與人之間的友好互動需要互惠。" }
+        ]
+      },
+      {
+        char: "櫃",
+        items: [
+          { word: "櫃檯", def: "商家或辦公室用來接待顧客、辦理手續的長桌。" },
+          { word: "書櫃", def: "專門存放書本的櫃子。" },
+          { word: "衣櫃", def: "用來收納衣服的家具。" },
+          { word: "櫥櫃", def: "裝有玻璃門或多格抽屜的櫃子，用來展示或儲存餐具、雜物。" },
+          { word: "掌櫃", def: "商店中負責管理財務或日常營運的負責人。" },
+          { word: "翻箱倒櫃(成語)", def: "翻動箱子，倒出櫃子裡的東西。形容徹底搜查、翻找得很混亂的樣子。" }
+        ]
+      },
+      {
+        char: "稿",
+        items: [
+          { word: "稿件", def: "寫好準備出版或發表的作品底稿。" },
+          { word: "稿費", def: "出版機構付給創作者的文字或圖像報酬。" },
+          { word: "草稿", def: "初步擬定的文字或圖畫底稿，尚未定案。" },
+          { word: "撰稿", def: "起草、編寫文章。" },
+          { word: "脫稿", def: "完成文章、畫作的寫作或繪製工作。" },
+          { word: "腹中打稿(成語)", def: "在動筆寫作或做事之前，先在心裡構思、規劃好大綱。" }
+        ]
+      },
+      {
+        char: "顫",
+        items: [
+          { word: "顫抖", def: "身體顫動、發抖（國語簡編本標準讀音為ㄓㄢˋ ㄉㄡˇ）。" },
+          { word: "顫慄", def: "身體因恐懼、寒冷或極度興奮而發抖。" },
+          { word: "顫動", def: "物體快速搖動、振動。" },
+          { word: "冷顫", def: "身體因突然受冷或緊張而發抖。" },
+          { word: "心驚膽顫(成語)", def: "形容十分驚慌害怕。" }
+        ]
+      },
+      {
+        char: "暮",
+        items: [
+          { word: "暮色", def: "傍晚昏暗的天色。" },
+          { word: "暮光", def: "太陽剛落山或剛升起時的微弱光線。" },
+          { word: "年暮", def: "一年將盡的時候，或比喻人到了晚年。" },
+          { word: "垂暮", def: "比喻晚年或事物的衰落。" },
+          { word: "暮鼓晨鐘(成語)", def: "佛寺中傍晚擊鼓，早晨敲鐘。比喻使人覺悟的言論。" }
+        ]
+      },
+      {
+        char: "肩",
+        items: [
+          { word: "肩膀", def: "脖子兩旁與手臂相連的部分。" },
+          { word: "肩負", def: "擔負、承受重任，如「肩負重任」。" },
+          { word: "比肩", def: "並肩而行。比喻地位相等或關係密切。" },
+          { word: "肩章", def: "佩戴在軍人、警察等制服肩膀上的徽章。" },
+          { word: "擦肩而過", def: "形容距離極近地掠過或錯過。" },
+          { word: "比肩繼踵(成語)", def: "肩並肩，腳尖碰腳跟。形容人很多，非常擁擁擠。" }
+        ]
+      },
+      {
+        char: "絨",
+        items: [
+          { word: "絨毛", def: "細小而柔軟的短毛。" },
+          { word: "羽絨", def: "羽毛根部的細軟絨毛，常用來填充防寒衣物。" },
+          { word: "絨線", def: "編織衣物用的毛線，或指帶絨的絲線。" },
+          { word: "天鵝絨", def: "一種質地柔軟、富有光澤的絲織品。" },
+          { word: "絨毛玩具", def: "外面是布料或絨面，內部填充棉花等軟物的玩具。" },
+          { word: "細軟如絨(成語)", def: "形容物體質地非常細緻、柔軟，就像絲絨一樣。" }
+        ]
+      },
+      {
+        char: "咂",
+        items: [
+          { word: "咂嘴", def: "用舌頭抵住上顎發出聲音，表示驚奇、讚嘆或惋惜。" },
+          { word: "咂摸", def: "仔細品嚐，引申為用心琢磨、細細體會。" },
+          { word: "咂酒", def: "指吸吮、品嚐美酒。" },
+          { word: "咂嘴弄舌", def: "形容吃得津津有味，或指說話囉唆、搬弄是非。" },
+          { word: "咂一嘴", def: "品嚐一下、吸吮一口。" },
+          { word: "咂嘴咂舌(成語)", def: "形容吃得津津有味，或對某事表示驚嘆、羨慕或可惜的樣子。" }
+        ]
+      },
+      {
+        char: "瀉",
+        items: [
+          { word: "傾瀉", def: "液體從高處急速流下，如「瀑布傾瀉而下」。" },
+          { word: "瀉藥", def: "能促進排便的藥物。" },
+          { word: "腹瀉", def: "拉肚子，指排便次數增多且糞便稀薄。" },
+          { word: "流瀉", def: "月光、水流等流淌、流布的樣子，如「月光流瀉而下」。" },
+          { word: "上吐下瀉", def: "又吐又拉，指嚴重的腸胃病症狀。" },
+          { word: "一瀉千里(成語)", def: "形容水流速度極快，向下奔流。也比喻文章氣勢奔放，或局勢急劇下滑。" }
+        ]
+      },
+      {
+        char: "賴",
+        items: [
+          { word: "依賴", def: "依靠他人或事物而不能獨立。" },
+          { word: "耍賴", def: "不承認自己的言行或錯誤，企圖逃避責任。" },
+          { word: "賴帳", def: "不承認欠下的債務。" },
+          { word: "賴以為生", def: "依靠某種方式來維持生命或生活。" },
+          { word: "誣賴", def: "無中生有地陷害、指責他人。" },
+          { word: "百無聊賴(成語)", def: "形容非常無聊，或者生活寂寞潦倒而無所寄託。" }
+        ]
+      }
+    ];
 
-    let lessonBank = [];
-    let currentLessonData = defaultLessonBank[0].data;
-    let currentLessonId = defaultLessonBank[0].id;
-    let currentCharIndex = 0;
+    let currentLessonData = [...defaultLessonData];
     let totalGroupCount = 7;
+    let currentCharIndex = 0;
     let masterTimerInterval = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSavedSettings();
+      populateReviewSelect();
+      listenToPresence();
+      listenToCloudUpdates(0);
+      renderSyncReviewGrid(0);
+    });
+
+    function loadSavedSettings() {
+      const savedGroups = localStorage.getItem('custom_group_count');
+      if (savedGroups) {
+        totalGroupCount = parseInt(savedGroups);
+        document.getElementById('group-count-select').value = totalGroupCount;
+      }
+      const savedLessonData = localStorage.getItem('custom_lesson_data');
+      if (savedLessonData) {
+        try { currentLessonData = JSON.parse(savedLessonData); } catch(e) {}
+      }
+    }
+
+    function switchView(viewName) {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+
+      if (viewName === 'review') {
+        document.querySelectorAll('.nav-btn')[0].classList.add('active');
+        document.getElementById('view-review').classList.add('active');
+        renderSyncReviewGrid(currentCharIndex);
+      } else if (viewName === 'settings') {
+        document.querySelectorAll('.nav-btn')[1].classList.add('active');
+        document.getElementById('view-settings').classList.add('active');
+      }
+    }
+
+    function updateGroupCountSetting(val) {
+      totalGroupCount = parseInt(val);
+      localStorage.setItem('custom_group_count', totalGroupCount);
+      renderPresenceBar();
+      renderSyncReviewGrid(currentCharIndex);
+    }
+
+    function populateReviewSelect() {
+      const sel = document.getElementById('review-char-select');
+      sel.innerHTML = currentLessonData.map((d, idx) => `<option value="${idx}">【${d.char}】字生字配對</option>`).join('');
+    }
+
+    function changeReviewCharacter(cIdx) {
+      currentCharIndex = parseInt(cIdx);
+      listenToCloudUpdates(currentCharIndex);
+      renderSyncReviewGrid(currentCharIndex);
+    }
 
     let mqttClient = null;
     let bcChannel = null;
@@ -612,137 +772,6 @@
       renderSyncReviewGrid(0);
     });
 
-    function switchView(viewName) {
-      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
-      const targetView = document.getElementById(`view-${viewName}`);
-      const targetBtn = document.getElementById(`tab-btn-${viewName}`);
-
-      if (targetView) targetView.classList.add('active');
-      if (targetBtn) targetBtn.classList.add('active');
-    }
-
-    function updateGroupCountSetting(val) {
-      totalGroupCount = parseInt(val) || 7;
-      localStorage.setItem('custom_group_count', totalGroupCount);
-      renderPresenceBar();
-      renderSyncReviewGrid(currentCharIndex);
-    }
-
-    function loadSavedSettings() {
-      const savedGroups = localStorage.getItem('custom_group_count');
-      if (savedGroups) {
-        totalGroupCount = parseInt(savedGroups) || 7;
-        const sel = document.getElementById('group-count-select');
-        if (sel) sel.value = totalGroupCount;
-      }
-      loadLessonBank();
-    }
-
-    function loadLessonBank() {
-      lessonBank = [...defaultLessonBank];
-
-      const savedActiveId = localStorage.getItem('active_lesson_id');
-      if (savedActiveId && lessonBank.some(l => l.id === savedActiveId)) {
-        currentLessonId = savedActiveId;
-      } else {
-        currentLessonId = lessonBank[0].id;
-      }
-
-      const activeLesson = lessonBank.find(l => l.id === currentLessonId) || lessonBank[0];
-      currentLessonId = activeLesson.id;
-      currentLessonData = activeLesson.data || [];
-
-      renderLessonSelectOptions();
-      populateReviewSelect();
-    }
-
-    function renderLessonSelectOptions() {
-      const masterSel = document.getElementById('master-lesson-select');
-      if (!masterSel) return;
-
-      masterSel.innerHTML = lessonBank.map(l => `
-        <option value="${l.id}" ${l.id === currentLessonId ? 'selected' : ''}>
-          📚 ${l.title} (${l.data.length} 個生字)
-        </option>
-      `).join('');
-    }
-
-    function switchActiveLesson(lessonId) {
-      const lesson = lessonBank.find(l => l.id === lessonId);
-      if (!lesson) return;
-
-      currentLessonId = lesson.id;
-      currentLessonData = lesson.data;
-      currentCharIndex = 0;
-      localStorage.setItem('active_lesson_id', currentLessonId);
-
-      renderLessonSelectOptions();
-      populateReviewSelect();
-      renderSyncReviewGrid(0);
-
-      broadcastLessonChange(lesson);
-      broadcastResetRound();
-    }
-
-    function broadcastLessonChange(lesson) {
-      const payloadData = {
-        lessonId: lesson.id,
-        lessonTitle: lesson.title,
-        lessonData: lesson.data,
-        updatedAt: Date.now()
-      };
-
-      const payload = { type: 'lesson_change', data: payloadData };
-
-      if (mqttClient && mqttClient.connected) {
-        mqttClient.publish('chinese_vocab_room601/lesson', JSON.stringify(payload));
-      }
-      if (bcChannel) {
-        bcChannel.postMessage(payload);
-      }
-      if (db) {
-        try {
-          db.ref('vocab_rooms/room601/current_lesson').set(payloadData);
-        } catch(e) {}
-      }
-    }
-
-    function populateReviewSelect() {
-      const sel = document.getElementById('review-char-select');
-      if (!sel) return;
-      sel.innerHTML = currentLessonData.map((d, idx) => `<option value="${idx}">【${d.char}】字生字配對</option>`).join('');
-    }
-
-    function changeReviewCharacter(cIdx) {
-      currentCharIndex = parseInt(cIdx);
-      listenToCloudUpdates(currentCharIndex);
-      renderSyncReviewGrid(currentCharIndex);
-      broadcastCharacterChange(currentCharIndex);
-    }
-
-    function broadcastCharacterChange(cIdx) {
-      const payloadData = {
-        targetCharIndex: cIdx,
-        lessonId: currentLessonId,
-        updatedAt: Date.now()
-      };
-      const payload = { type: 'character_change', data: payloadData };
-
-      if (mqttClient && mqttClient.connected) {
-        mqttClient.publish('chinese_vocab_room601/character', JSON.stringify(payload));
-      }
-      if (bcChannel) {
-        bcChannel.postMessage(payload);
-      }
-      if (db) {
-        try {
-          db.ref('vocab_rooms/room601/current_character').set(payloadData);
-        } catch(e) {}
-      }
-    }
-
     function initTeacherSyncEngine() {
       // 1. BroadcastChannel for local tab sync
       try {
@@ -752,24 +781,7 @@
         };
       } catch(e) {}
 
-      // 2. LocalStorage storage listener
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'vocab_room601_presence' && e.newValue) {
-          try {
-            const pMap = JSON.parse(e.newValue);
-            for (let gId in pMap) {
-              handlePresence(gId);
-            }
-          } catch(err) {}
-        } else if (e.key && e.key.startsWith('vocab_room601_answer_char_') && e.newValue) {
-          try {
-            const aData = JSON.parse(e.newValue);
-            handleIncomingAnswer(aData, aData.charIndex);
-          } catch(err) {}
-        }
-      });
-
-      // 3. MQTT for Cloud Real-time WebSockets Sync
+      // 2. MQTT for Cloud Real-time WebSockets Sync
       if (window.mqtt) {
         try {
           mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
@@ -779,6 +791,8 @@
 
           mqttClient.on('connect', () => {
             mqttClient.subscribe('chinese_vocab_room601/#');
+            const badge = document.getElementById('cloud-sync-badge');
+            if (badge) badge.textContent = '🟢 雲端同步已連線';
           });
 
           mqttClient.on('message', (topic, message) => {
@@ -789,6 +803,7 @@
           });
 
           mqttClient.on('error', () => {
+            // Fallback to HiveMQ
             try {
               mqttClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt', { clientId: 'teacher_' + Math.random().toString(16).substr(2, 8) });
             } catch(e) {}
@@ -796,7 +811,7 @@
         } catch(e) {}
       }
 
-      // 4. Firebase Listeners
+      // 3. Firebase Fallback
       listenToPresence();
       listenToCloudUpdates(0);
 
@@ -804,61 +819,45 @@
       setInterval(() => {
         const now = Date.now();
         let changed = false;
-        for (let g = 1; g <= totalGroupCount; g++) {
-          if (activePresence[g]) {
-            if (now - activePresence[g].lastSeen > 12000) {
-              delete activePresence[g];
-              changed = true;
-            }
+        for (let g in activePresence) {
+          if (activePresence[g] && activePresence[g].lastSeen && (now - activePresence[g].lastSeen > 12000)) {
+            delete activePresence[g];
+            changed = true;
           }
         }
         if (changed) {
           renderPresenceBar();
           renderSyncReviewGrid(currentCharIndex);
         }
-      }, 2000);
-    }
-
-    function handlePresence(gId) {
-      gId = parseInt(gId);
-      if (isNaN(gId) || gId <= 0) return;
-      activePresence[gId] = {
-        status: 'online',
-        lastSeen: Date.now()
-      };
-      renderPresenceBar();
-      renderSyncReviewGrid(currentCharIndex);
+      }, 3000);
     }
 
     function handleIncomingTeacherSync(msg) {
       if (!msg) return;
 
       if (msg.type === 'presence') {
-        const pData = msg.data || msg;
-        const gId = pData.groupId || pData.gId;
-        if (gId) {
-          handlePresence(gId);
+        const pData = msg.data;
+        if (pData && pData.groupId) {
+          activePresence[pData.groupId] = {
+            status: pData.status,
+            lastSeen: Date.now()
+          };
+          renderPresenceBar();
+          renderSyncReviewGrid(currentCharIndex);
         }
       } else if (msg.type === 'answer') {
         const aData = msg.data;
         if (aData && aData.groupId) {
-          handleIncomingAnswer(aData, msg.charIdx);
+          const cIdx = msg.charIdx !== undefined ? msg.charIdx : currentCharIndex;
+          const syncKey = `sync_char_${cIdx}`;
+          const localMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
+          localMap[aData.groupId] = aData;
+          localStorage.setItem(syncKey, JSON.stringify(localMap));
+
+          if (cIdx === currentCharIndex) {
+            renderSyncReviewGrid(cIdx);
+          }
         }
-      }
-    }
-
-    function handleIncomingAnswer(aData, charIdx) {
-      if (!aData || !aData.groupId) return;
-      const gId = parseInt(aData.groupId);
-      const cIdx = charIdx !== undefined ? parseInt(charIdx) : (aData.charIndex !== undefined ? parseInt(aData.charIndex) : currentCharIndex);
-
-      const syncKey = `sync_char_${cIdx}`;
-      const localMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
-      localMap[gId] = aData;
-      localStorage.setItem(syncKey, JSON.stringify(localMap));
-
-      if (cIdx === currentCharIndex) {
-        renderSyncReviewGrid(cIdx);
       }
     }
 
@@ -868,13 +867,9 @@
 
       const payloadData = {
         state: state,
-        lessonId: currentLessonId,
-        lessonTitle: lessonBank.find(l => l.id === currentLessonId)?.title || '',
-        lessonData: currentLessonData,
         targetCharIndex: currentCharIndex,
         timerSeconds: timerSecs,
-        startTime: startTime,
-        updatedAt: startTime
+        startTime: startTime
       };
 
       const payload = { type: 'control', data: payloadData };
@@ -891,10 +886,6 @@
         } catch(e) {}
       }
 
-      try {
-        localStorage.setItem('vocab_room601_control', JSON.stringify(payloadData));
-      } catch(e) {}
-
       if (state === 'active') {
         startMasterClock(startTime, timerSecs);
       } else if (state === 'ended') {
@@ -907,6 +898,7 @@
       }
     }
 
+    // Master Broadcast Commands
     function broadcastStartRound() {
       broadcastMasterControl('active');
     }
@@ -923,7 +915,7 @@
       if (masterTimerInterval) clearInterval(masterTimerInterval);
 
       const updateClock = () => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const elapsed = Math.floor((new Date().getTime() - startTime) / 1000);
         const rem = Math.max(0, totalSecs - elapsed);
 
         const mins = Math.floor(rem / 60);
@@ -940,18 +932,22 @@
       masterTimerInterval = setInterval(updateClock, 1000);
     }
 
+    // Live Connected Presence Listener (Firebase Fallback)
+    let presenceDataCache = {};
+
     function listenToPresence() {
       if (!db) return;
       try {
         db.ref('vocab_rooms/room601/presence').on('value', (snapshot) => {
-          const presenceDataCache = snapshot.val() || {};
+          presenceDataCache = snapshot.val() || {};
           for (let key in presenceDataCache) {
             const gInfo = presenceDataCache[key];
-            const gId = gInfo ? (gInfo.groupId || parseInt(key.replace('group_', ''))) : null;
-            if (gId) {
-              handlePresence(gId);
+            if (gInfo && gInfo.groupId) {
+              activePresence[gInfo.groupId] = { status: 'online', lastSeen: Date.now() };
             }
           }
+          renderPresenceBar();
+          renderSyncReviewGrid(currentCharIndex);
         });
       } catch(e) {}
     }
@@ -960,11 +956,9 @@
       const container = document.getElementById('presence-bar-container');
       if (!container) return;
       let html = '<span style="font-size: 13px; color: #c7d2fe; font-weight: 700;">各組連線狀態：</span>';
-      const now = Date.now();
       for (let g = 1; g <= totalGroupCount; g++) {
-        const info = activePresence[g];
-        const isOnline = !!(info && (now - info.lastSeen < 15000));
-        html += `<span class="presence-badge ${isOnline ? 'online' : ''}" style="margin-left: 6px;">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
+        const isOnline = !!activePresence[g];
+        html += `<span class="presence-badge ${isOnline ? 'online' : ''}">第 ${g} 組 ${isOnline ? '🟢 已連線' : '⚪ 未連線'}</span>`;
       }
       container.innerHTML = html;
     }
@@ -974,20 +968,14 @@
       if (!db) return;
       if (currentDbRef) currentDbRef.off();
 
-      currentDbRef = db.ref(`vocab_rooms/room601/answers/char_${cIdx}`);
+      currentDbRef = db.ref(`vocab_rooms/room601/char_${cIdx}`);
       currentDbRef.on('value', (snapshot) => {
         const cloudMap = snapshot.val() || {};
         const syncKey = `sync_char_${cIdx}`;
         const localMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
 
-        for (let gKey in cloudMap) {
-          const item = cloudMap[gKey];
-          if (item) {
-            const gId = (item.groupId !== undefined) ? parseInt(item.groupId) : parseInt(gKey.replace('group_', ''));
-            if (!isNaN(gId)) {
-              localMap[gId] = item;
-            }
-          }
+        for (let gId in cloudMap) {
+          localMap[gId] = cloudMap[gId];
         }
 
         localStorage.setItem(syncKey, JSON.stringify(localMap));
@@ -998,30 +986,22 @@
     function renderSyncReviewGrid(cIdx) {
       if (cIdx >= currentLessonData.length) cIdx = 0;
       const groupData = currentLessonData[cIdx];
-      if (!groupData) return;
-
-      const titleEl = document.getElementById('review-title-display');
-      if (titleEl) titleEl.textContent = `【${groupData.char}】字 全班 ${totalGroupCount} 組作答結果對比與檢討`;
-
-      const selEl = document.getElementById('review-char-select');
-      if (selEl) selEl.value = cIdx;
+      document.getElementById('review-title-display').textContent = `【${groupData.char}】字 全班 ${totalGroupCount} 組作答結果對比與檢討`;
+      document.getElementById('review-char-select').value = cIdx;
 
       const syncKey = `sync_char_${cIdx}`;
       const syncMap = JSON.parse(localStorage.getItem(syncKey) || '{}');
       const container = document.getElementById('groups-review-grid-container');
-      if (!container) return;
 
       const wordErrorCounts = {};
       groupData.items.forEach(item => wordErrorCounts[item.word] = 0);
 
       let answeredGroupCount = 0;
       const htmlArray = [];
-      const now = Date.now();
 
       for (let g = 1; g <= totalGroupCount; g++) {
         const gState = syncMap[g];
-        const presInfo = activePresence[g];
-        const isGroupConnected = !!(presInfo && (now - presInfo.lastSeen < 15000));
+        const isGroupConnected = activePresence[g];
         
         if (!gState || !gState.userMatches || Object.keys(gState.userMatches).length === 0) {
           htmlArray.push(`
@@ -1098,8 +1078,8 @@
       const bannerDesc = document.getElementById('misconception-desc');
 
       if (answeredGroupCount === 0) {
-        if (bannerTitle) bannerTitle.textContent = `⏳ 全班【${groupData.char}】字尚未開始作答`;
-        if (bannerDesc) bannerDesc.textContent = `請老師請學生在平板點選【${groupData.char}】生字進行配對連線！`;
+        bannerTitle.textContent = `⏳ 全班【${groupData.char}】字尚未開始作答`;
+        bannerDesc.textContent = `請老師請學生在平板點選【${groupData.char}】生字進行配對連線！`;
         return;
       }
 
@@ -1113,11 +1093,11 @@
       }
 
       if (maxErrors > 0) {
-        if (bannerTitle) bannerTitle.textContent = `🔥 課堂核心檢討標的：【${topErrorWord}】（全班共 ${maxErrors} 組在此題發生迷思）`;
-        if (bannerDesc) bannerDesc.textContent = `請老師引導全班針對【${topErrorWord}】的白話釋義與相近詞進行比較說明！`;
+        bannerTitle.textContent = `🔥 課堂核心檢討標的：【${topErrorWord}】（全班共 ${maxErrors} 組在此題發生迷思）`;
+        bannerDesc.textContent = `請老師引導全班針對【${topErrorWord}】的白話釋義與相近詞進行比較說明！`;
       } else {
-        if (bannerTitle) bannerTitle.textContent = `🎉 全班展現超強實力！【${groupData.char}】字全班表現優異！`;
-        if (bannerDesc) bannerDesc.textContent = `已作答的 ${answeredGroupCount} 個小組皆精準完成釋義配對，可請小組發表造句進行延伸學習！`;
+        bannerTitle.textContent = `🎉 全班展現超強實力！【${groupData.char}】字全班表現優異！`;
+        bannerDesc.textContent = `已作答的 ${answeredGroupCount} 個小組皆精準完成釋義配對，可請小組發表造句進行延伸學習！`;
       }
     }
 
@@ -1126,9 +1106,7 @@
       localStorage.removeItem(syncKey);
 
       if (db) {
-        try {
-          db.ref(`vocab_rooms/room601/answers/char_${currentCharIndex}`).remove();
-        } catch(e) {}
+        db.ref(`vocab_rooms/room601/char_${currentCharIndex}`).remove();
       }
 
       renderSyncReviewGrid(currentCharIndex);
@@ -1137,14 +1115,12 @@
     function clearAllSyncData() {
       if (confirm("確定要清空全班所有生字的歷史作答紀錄嗎？")) {
         for (let key in localStorage) {
-          if (key.startsWith('sync_char_') || key.startsWith('vocab_group_') || key.startsWith('vocab_room601_')) {
+          if (key.startsWith('sync_char_') || key.startsWith('vocab_group_')) {
             localStorage.removeItem(key);
           }
         }
         if (db) {
-          try {
-            db.ref(`vocab_rooms/room601`).remove();
-          } catch(e) {}
+          db.ref(`vocab_rooms/room601`).remove();
         }
         renderSyncReviewGrid(0);
         alert("已成功清空全班作答紀錄！");
@@ -1165,8 +1141,7 @@
 
       for (let i = 0; i < charBlocks.length; i += 2) {
         const charName = charBlocks[i].trim();
-        const contentLines = (charBlocks[i + 1] || '').split('
-').map(l => l.trim()).filter(Boolean);
+        const contentLines = (charBlocks[i + 1] || '').split('\n').map(l => l.trim()).filter(Boolean);
 
         const items = [];
         contentLines.forEach(line => {
@@ -1201,7 +1176,7 @@
     }
 
     function loadDefaultLesson1() {
-      currentLessonData = [...defaultLessonBank[0].data];
+      currentLessonData = [...defaultLessonData];
       localStorage.removeItem('custom_lesson_data');
 
       populateReviewSelect();
