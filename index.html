@@ -323,8 +323,14 @@
     }
 
     .item-card.matched {
-      border-color: var(--success);
-      background: rgba(16, 185, 129, 0.15);
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.18);
+    }
+
+    .status-alert-box.completed {
+      background: #1e1b4b;
+      border-color: #6366f1;
+      color: #a5b4fc;
     }
 
     .word-text {
@@ -354,7 +360,7 @@
     }
 
     .item-card.matched .match-badge {
-      background: var(--success);
+      background: #6366f1;
       color: #fff;
     }
 
@@ -1415,36 +1421,34 @@
 
     function checkMatchingProgress() {
       const groupData = currentLessonData[currentCharIndex];
+      if (!groupData) return;
       const totalCount = groupData.items.length;
       const matchedCount = Object.keys(userMatches).length;
 
       const indicator = document.getElementById('status-indicator');
 
-      if (matchedCount < totalCount) {
-        indicator.className = 'status-alert-box';
-        indicator.innerHTML = `<span>⏳ 作答進行中 (${matchedCount}/${totalCount})</span>`;
-        saveSyncState(currentGroupId, currentCharIndex, matchedCount, totalCount, false, userMatches, shuffledDefs);
-      } else {
-        let correctCount = 0;
-        for (let wIdx in userMatches) {
-          const dIdx = userMatches[wIdx];
-          if (shuffledDefs[dIdx].originalIdx === parseInt(wIdx)) {
-            correctCount++;
-          }
+      // Compute correct count internally for teacher review syncing
+      let correctCount = 0;
+      for (let wIdx in userMatches) {
+        const dIdx = userMatches[wIdx];
+        if (shuffledDefs[dIdx] && shuffledDefs[dIdx].originalIdx === parseInt(wIdx)) {
+          correctCount++;
         }
+      }
+      const isCorrect = (correctCount === totalCount && totalCount > 0);
 
-        if (correctCount === totalCount) {
-          indicator.className = 'status-alert-box correct';
-          indicator.innerHTML = `<span>🎉 【第 ${currentGroupId} 組】100% 全對過關！</span>`;
-          document.body.className = 'is-correct-theme';
-          triggerConfetti();
-          playSuccessSound();
-          saveSyncState(currentGroupId, currentCharIndex, totalCount, totalCount, true, userMatches, shuffledDefs);
-        } else {
+      if (matchedCount < totalCount) {
+        if (indicator) {
           indicator.className = 'status-alert-box';
-          indicator.innerHTML = `<span>⚠️ 答對 ${correctCount}/${totalCount} 題，請再討論調整！</span>`;
-          saveSyncState(currentGroupId, currentCharIndex, correctCount, totalCount, false, userMatches, shuffledDefs);
+          indicator.innerHTML = `<span>✍️ 作答進行中 (${matchedCount}/${totalCount})</span>`;
         }
+        saveSyncState(currentGroupId || 1, currentCharIndex, correctCount, totalCount, isCorrect, userMatches, shuffledDefs);
+      } else {
+        if (indicator) {
+          indicator.className = 'status-alert-box completed';
+          indicator.innerHTML = `<span>✅ 已完成連線 (${totalCount}/${totalCount})，可自由調整</span>`;
+        }
+        saveSyncState(currentGroupId || 1, currentCharIndex, correctCount, totalCount, isCorrect, userMatches, shuffledDefs);
       }
     }
 
